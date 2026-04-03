@@ -102,29 +102,26 @@ class _SplashPageState extends State<SplashPage>
               Container(
                 width: 120,
                 height: 120,
+                padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.saffron,
-                      AppColors.deepSaffron,
-                      AppColors.templeGold,
-                    ],
-                  ),
+                  color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.saffron.withValues(alpha: 0.4),
-                      blurRadius: 30,
-                      spreadRadius: 5,
+                      color: isDark
+                          ? Colors.black.withValues(alpha: 0.5)
+                          : AppColors.saffron.withValues(alpha: 0.2),
+                      blurRadius: 24,
+                      spreadRadius: 4,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
-                child: const Icon(
-                  Icons.temple_hindu,
-                  size: 56,
-                  color: Colors.white,
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/images/logo/7.png',
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
 

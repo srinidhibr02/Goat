@@ -29,6 +29,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       body: SafeArea(
@@ -42,31 +43,32 @@ class _LoginPageState extends State<LoginPage> {
               // ── Header ──────────────────────────────────────────────
               Center(
                 child: Container(
-                  width: 80,
-                  height: 80,
+                  width: 120,
+                  height: 120,
+                  padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.saffron,
-                        AppColors.deepSaffron,
-                      ],
-                    ),
+                    color: isDark ? AppColors.darkSurfaceVariant : Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.saffron.withValues(alpha: 0.3),
-                        blurRadius: 20,
+                        color: isDark
+                            ? Colors.black.withValues(alpha: 0.5)
+                            : AppColors.saffron.withValues(alpha: 0.2),
+                        blurRadius: 16,
                         spreadRadius: 2,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.temple_hindu,
-                    size: 40,
-                    color: Colors.white,
-                  ),
+                  child: ClipOval(
+  child: Padding(
+    padding: const EdgeInsets.all(1.0), // adjust as needed
+    child: Image.asset(
+      'assets/images/logo/7.png',
+      fit: BoxFit.fill,
+    ),
+  ),
+),
                 ),
               ),
 
