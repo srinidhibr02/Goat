@@ -33,3 +33,19 @@ final class NetworkFailure extends Failure {
     String message = 'No internet connection',
   }) : super(message);
 }
+
+/// A failure originating from an authentication operation.
+final class AuthFailure extends Failure {
+  const AuthFailure({required String message}) : super(message);
+
+  static const invalidCredentials =
+      AuthFailure(message: 'Invalid email or password.');
+  static const userNotFound =
+      AuthFailure(message: 'No account found with this email.');
+  static const emailAlreadyInUse =
+      AuthFailure(message: 'An account with this email already exists.');
+  static const weakPassword =
+      AuthFailure(message: 'Password must be at least 6 characters.');
+  static const unknown =
+      AuthFailure(message: 'An unknown error occurred. Please try again.');
+}
