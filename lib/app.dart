@@ -7,26 +7,26 @@ import 'router.dart';
 
 /// Root application widget.
 ///
-/// Uses [MaterialApp.router] with GoRouter and the GOAT theme system.
-/// Wrapped in a [ConsumerWidget] so any Riverpod provider can be
-/// consumed at the app level if needed in the future.
+/// Consumes [routerProvider] so the auth-aware [GoRouter] is wired in.
 class GoatApp extends ConsumerWidget {
   const GoatApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+
     return MaterialApp.router(
-      // ── Identity ──────────────────────────────────────────────────
+      // ── Identity ────────────────────────────────────────────────────
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
 
-      // ── Theme ─────────────────────────────────────────────────────
+      // ── Theme ────────────────────────────────────────────────────────
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
 
-      // ── Routing ───────────────────────────────────────────────────
-      routerConfig: appRouter,
+      // ── Routing ──────────────────────────────────────────────────────
+      routerConfig: router,
     );
   }
 }

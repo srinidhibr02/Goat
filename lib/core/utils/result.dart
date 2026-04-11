@@ -1,5 +1,16 @@
 import '../errors/failures.dart';
 
+/// Placeholder type for void-equivalent [Result] returns.
+///
+/// Use [Unit.instance] to create a successful void result:
+/// ```dart
+/// return Ok(Unit.instance);
+/// ```
+final class Unit {
+  const Unit._();
+  static const Unit instance = Unit._();
+}
+
 /// Lightweight result type used at repository boundaries.
 ///
 /// Repositories return [Ok<T>] on success and [Err<T>] on failure,
