@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../auth/domain/entities/app_user.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../domain/entities/temple_category.dart';
+import '../providers/search_provider.dart';
 import '../providers/temples_providers.dart';
 import '../widgets/temple_card.dart';
 
@@ -17,16 +18,16 @@ class HomePage extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     final user = authState.valueOrNull;
     final selectedCategory = ref.watch(selectedCategoryProvider);
-    final templesAsync = ref.watch(templesProvider);
+    final templesAsync = ref.watch(filteredTemplesProvider);
 
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () => ref.refresh(templesProvider.future),
+          onRefresh: () => ref.refresh(filteredTemplesProvider.future),
           child: CustomScrollView(
             slivers: [
               // ── Header ───────────────────────────────────────────────
-              SliverToBoxAdapter(child: _Header(user: user, ref: ref)),
+              SliverToBoxAdapter(child: _Header(user: user)),
 
               // ── Category Chips ────────────────────────────────────────
               SliverToBoxAdapter(
@@ -72,7 +73,7 @@ class HomePage extends ConsumerWidget {
                         const SizedBox(height: 8),
                         TextButton(
                           onPressed: () =>
-                              ref.refresh(templesProvider.future),
+                              ref.refresh(filteredTemplesProvider.future),
                           child: const Text('Retry'),
                         ),
                       ],
@@ -90,11 +91,29 @@ class HomePage extends ConsumerWidget {
 
 // ── Header ────────────────────────────────────────────────────────────────────
 
-class _Header extends StatelessWidget {
+class _Header extends ConsumerStatefulWidget {
   final AppUser? user;
-  final WidgetRef ref;
 
-  const _Header({this.user, required this.ref});
+  const _Header({this.user});
+
+  @override
+  ConsumerState<_Header> createState() => _HeaderState();
+}
+
+class _HeaderState extends ConsumerState<_Header> {
+  final _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.text = ref.read(searchQueryProvider);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   String _greeting() {
     final h = DateTime.now().hour;
@@ -106,8 +125,9 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final initial = (user?.displayName?.isNotEmpty == true
-            ? user!.displayName![0]
+    final query = ref.watch(searchQueryProvider);
+    final initial = (widget.user?.displayName?.isNotEmpty == true
+            ? widget.user!.displayName![0]
             : 'D')
         .toUpperCase();
 
@@ -130,7 +150,7 @@ class _Header extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      user?.displayName ?? 'Devotee',
+                      widget.user?.displayName ?? 'Devotee',
                       style: theme.textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.w700),
                     ),
@@ -138,46 +158,42 @@ class _Header extends StatelessWidget {
                 ),
               ),
 
-              // Avatar with sign-out menu
-              PopupMenuButton<String>(
-                offset: const Offset(0, 52),
-                tooltip: 'Account',
-                child: CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppColors.saffron,
-                  backgroundImage: user?.photoUrl != null
-                      ? NetworkImage(user!.photoUrl!)
-                      : null,
-                  child: user?.photoUrl == null
-                      ? Text(initial,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700))
-                      : null,
-                ),
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'signout',
-                    onTap: () =>
-                        ref.read(authControllerProvider.notifier).signOut(),
-                    child: const Row(children: [
-                      Icon(Icons.logout),
-                      SizedBox(width: 12),
-                      Text('Sign Out'),
-                    ]),
-                  ),
-                ],
+              // Avatar
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.saffron,
+                backgroundImage: widget.user?.photoUrl != null
+                    ? NetworkImage(widget.user!.photoUrl!)
+                    : null,
+                child: widget.user?.photoUrl == null
+                    ? Text(initial,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700))
+                    : null,
               ),
             ],
           ),
 
           const SizedBox(height: 20),
 
-          // Search bar (UI only — search logic in a future step)
+          // Search bar — wired to searchQueryProvider
           TextField(
+            controller: _searchController,
+            onChanged: (v) =>
+                ref.read(searchQueryProvider.notifier).state = v,
             decoration: InputDecoration(
               hintText: 'Search temples, cities…',
               prefixIcon: const Icon(Icons.search),
+              suffixIcon: query.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        _searchController.clear();
+                        ref.read(searchQueryProvider.notifier).state = '';
+                      },
+                    )
+                  : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
@@ -253,10 +269,10 @@ class _EmptyState extends StatelessWidget {
           Icon(Icons.temple_hindu,
               size: 72, color: theme.colorScheme.outlineVariant),
           const SizedBox(height: 16),
-          Text('No temples in this category',
+          Text('No temples found',
               style: theme.textTheme.titleMedium),
           const SizedBox(height: 8),
-          Text('Try selecting a different filter',
+          Text('Try a different search or category',
               style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant)),
         ],

@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/temple.dart';
+import '../providers/favorites_provider.dart';
 
 /// Full-screen detail view for a single temple.
-class TempleDetailPage extends StatelessWidget {
+class TempleDetailPage extends ConsumerWidget {
   final Temple temple;
 
   const TempleDetailPage({super.key, required this.temple});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isFav = ref.watch(isFavoriteProvider(temple.id));
 
     return Scaffold(
       body: CustomScrollView(
@@ -22,6 +27,18 @@ class TempleDetailPage extends StatelessWidget {
             pinned: true,
             stretch: true,
             backgroundColor: theme.colorScheme.surface,
+            actions: [
+              IconButton(
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  ref.read(favoritesProvider.notifier).toggle(temple.id);
+                },
+                icon: Icon(
+                  isFav ? Icons.favorite : Icons.favorite_border,
+                  color: isFav ? Colors.redAccent : Colors.white,
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               stretchModes: const [
                 StretchMode.zoomBackground,
@@ -191,14 +208,8 @@ class TempleDetailPage extends StatelessWidget {
             height: 52,
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Booking feature coming soon 🙏'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
+              onPressed: () =>
+                  context.push('/book/${temple.id}', extra: temple),
               icon: const Icon(Icons.calendar_today_outlined),
               label: const Text('Book a Visit'),
             ),
