@@ -1,8 +1,10 @@
-import 'dart:async';
+
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import 'package:goat/core/constants/app_constants.dart';
 
 import 'features/auth/domain/entities/app_user.dart';
 import 'features/auth/presentation/pages/forgot_password_page.dart';
@@ -23,63 +25,79 @@ import 'shared/widgets/app_shell.dart';
 
 const _publicPaths = {'/login', '/sign-up', '/forgot-password'};
 
+// ── Splash Timer logic ────────────────────────────────────────────────────────
+
+/// Enforces a minimum splash duration so the animation finishes playing.
+final splashStateProvider = FutureProvider<void>((ref) async {
+  await Future<void>.delayed(const Duration(milliseconds: AppConstants.splashDuration));
+});
+
 // ── Router notifier ───────────────────────────────────────────────────────────
 
 /// Bridges Riverpod's [authStateProvider] with GoRouter's refresh system.
-///
-/// Implements [Listenable] so GoRouter re-evaluates redirects whenever
-/// the auth state changes.
-class RouterNotifier extends AsyncNotifier<void> implements Listenable {
-  VoidCallback? _routerListener;
+class RouterNotifier extends ChangeNotifier {
+  final Ref ref;
 
-  @override
-  FutureOr<void> build() {
-    // Notify GoRouter whenever auth state changes.
+  RouterNotifier(this.ref) {
+    // Notify GoRouter when auth state changes
     ref.listen<AsyncValue<AppUser?>>(
       authStateProvider,
-      (_, __) => _routerListener?.call(),
+      (_, __) => notifyListeners(),
+    );
+    // Notify GoRouter when the initial splash timer is done
+    ref.listen<AsyncValue<void>>(
+      splashStateProvider,
+      (_, __) => notifyListeners(),
     );
   }
 
   /// GoRouter redirect logic — called on every navigation event.
   String? redirect(BuildContext context, GoRouterState state) {
     final auth = ref.read(authStateProvider);
+    final splash = ref.read(splashStateProvider);
     final location = state.matchedLocation;
 
-    // While auth is initialising, keep showing splash.
-    if (auth.isLoading || auth.hasError) return null;
+    debugPrint('RouterNotifier.redirect: location=$location, authLoading=${auth.isLoading}, splashLoading=${splash.isLoading}');
+
+    // While auth is initialising or splash timer is ticking, keep showing splash.
+    if (auth.isLoading || auth.hasError || splash.isLoading) return null;
 
     final isLoggedIn = auth.valueOrNull != null;
     final isSplash = location == '/';
     final isPublic = _publicPaths.contains(location);
 
     // Splash is transient — always redirect once auth resolves.
-    if (isSplash) return isLoggedIn ? '/home' : '/login';
+    if (isSplash) {
+      debugPrint('RouterNotifier.redirect: Redirecting from Splash -> ${isLoggedIn ? '/home' : '/login'}');
+      return isLoggedIn ? '/home' : '/login';
+    }
 
     // Protect private routes.
-    if (!isLoggedIn && !isPublic) return '/login';
+    if (!isLoggedIn && !isPublic) {
+      debugPrint('RouterNotifier.redirect: Redirecting to /login (protected)');
+      return '/login';
+    }
 
     // Redirect authenticated users away from auth screens.
-    if (isLoggedIn && isPublic) return '/home';
+    if (isLoggedIn && isPublic) {
+      debugPrint('RouterNotifier.redirect: Redirecting to /home (already logged in)');
+      return '/home';
+    }
 
     return null;
   }
-
-  @override
-  void addListener(VoidCallback listener) => _routerListener = listener;
-
-  @override
-  void removeListener(VoidCallback listener) => _routerListener = null;
 }
 
-final routerNotifierProvider =
-    AsyncNotifierProvider<RouterNotifier, void>(RouterNotifier.new);
+final routerNotifierProvider = Provider<RouterNotifier>((ref) {
+  return RouterNotifier(ref);
+});
 
 // ── Router provider ───────────────────────────────────────────────────────────
 
 /// Provides the app's [GoRouter] instance, wired to auth-aware redirects.
 final routerProvider = Provider<GoRouter>((ref) {
-  final notifier = ref.read(routerNotifierProvider.notifier);
+  final notifier = ref.watch(routerNotifierProvider);
+
 
   return GoRouter(
     debugLogDiagnostics: false,
