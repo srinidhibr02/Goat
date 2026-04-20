@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:goat/core/constants/app_constants.dart';
 import 'package:goat/core/theme/app_colors.dart';
@@ -43,15 +42,8 @@ class _SplashPageState extends State<SplashPage>
 
     _controller.forward();
 
-    // Auto-navigate after splash duration.
-    Future.delayed(
-      const Duration(milliseconds: AppConstants.splashDuration),
-      () {
-        if (mounted) {
-          context.go('/login');
-        }
-      },
-    );
+    // Auth-aware redirect in router.dart handles navigation
+    // once the auth state stream resolves. No manual navigation needed.
   }
 
   @override
