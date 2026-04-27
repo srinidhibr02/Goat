@@ -3,6 +3,10 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:goat/core/utils/result.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+
+import '../../data/datasources/auth_datasource.dart';
+import '../../data/datasources/firebase_auth_datasource.dart';
 import '../../data/datasources/mock_auth_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/app_user.dart';
@@ -10,10 +14,17 @@ import '../../domain/repositories/auth_repository.dart';
 
 // ── Datasource ───────────────────────────────────────────────────────────────
 
-final _authDatasourceProvider = Provider<MockAuthDatasource>((ref) {
-  final ds = MockAuthDatasource();
-  ref.onDispose(ds.dispose);
-  return ds;
+final _authDatasourceProvider = Provider<AuthDatasource>((ref) {
+  try {
+    // If Firebase is configured, use real backend
+    Firebase.app();
+    return FirebaseAuthDatasource();
+  } catch (_) {
+    // Fallback to mock data
+    final ds = MockAuthDatasource();
+    ref.onDispose(ds.dispose);
+    return ds;
+  }
 });
 
 // ── Repository ───────────────────────────────────────────────────────────────

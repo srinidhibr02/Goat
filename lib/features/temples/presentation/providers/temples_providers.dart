@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:goat/core/utils/result.dart';
 
+import 'package:firebase_core/firebase_core.dart';
+
+import '../../data/datasources/firestore_temple_datasource.dart';
+import '../../data/datasources/temples_datasource.dart';
 import '../../data/datasources/temples_local_datasource.dart';
 import '../../data/repositories/temple_repository_impl.dart';
 import '../../domain/entities/temple.dart';
@@ -9,9 +13,14 @@ import '../../domain/repositories/temple_repository.dart';
 
 // ── Datasource ───────────────────────────────────────────────────────────────
 
-final templeDatasourceProvider = Provider<TemplesLocalDatasource>(
-  (_) => TemplesLocalDatasource(),
-);
+final templeDatasourceProvider = Provider<TemplesDatasource>((ref) {
+  try {
+    Firebase.app();
+    return FirestoreTempleDatasource();
+  } catch (_) {
+    return TemplesLocalDatasource();
+  }
+});
 
 // ── Repository ───────────────────────────────────────────────────────────────
 

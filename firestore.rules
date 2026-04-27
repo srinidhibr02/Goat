@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Temples: public read, no client writes ────────────────────────
+    match /temples/{templeId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── User data: only the authenticated owner ───────────────────────
+    match /users/{userId} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+
+      // Favorites and Bookings sub-collections
+      match /{subcollection}/{docId} {
+        allow read, write: if request.auth != null
+                           && request.auth.uid == userId;
+      }
+    }
+  }
+}

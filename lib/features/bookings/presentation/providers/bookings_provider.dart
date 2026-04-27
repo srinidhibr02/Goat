@@ -1,20 +1,60 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/firestore_paths.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../domain/entities/booking.dart';
 
 // ── Bookings State ───────────────────────────────────────────────────────────
 
 final bookingsProvider =
     StateNotifierProvider<BookingsNotifier, List<Booking>>(
-  (_) => BookingsNotifier(),
+  (ref) => BookingsNotifier(ref),
 );
 
 class BookingsNotifier extends StateNotifier<List<Booking>> {
-  BookingsNotifier() : super([]);
+  final Ref _ref;
+  StreamSubscription? _sub;
+  String? _uid;
+  bool _isFirebaseConfigured = false;
 
-  int _nextId = 1;
+  BookingsNotifier(this._ref) : super([]) {
+    try {
+      Firebase.app();
+      _isFirebaseConfigured = true;
+    } catch (_) {}
 
-  /// Creates a new confirmed booking and adds it to the list.
+    _ref.listen(authStateProvider, (prev, next) {
+      final user = next.valueOrNull;
+      if (user?.uid != _uid) {
+        _uid = user?.uid;
+        _initFirestoreSync();
+      }
+    });
+  }
+
+  void _initFirestoreSync() {
+    _sub?.cancel();
+    _sub = null;
+
+    if (_uid == null) {
+      state = [];
+      return;
+    }
+
+    if (!_isFirebaseConfigured) return;
+
+    final query = FirebaseFirestore.instance
+        .collection(FirestorePaths.userBookings(_uid!))
+        .orderBy('createdAt', descending: true);
+
+    _sub = query.snapshots().listen((snapshot) {
+      state = snapshot.docs.map((doc) => Booking.fromJson(doc.data())).toList();
+    });
+  }
+
   void createBooking({
     required String templeId,
     required String templeName,
@@ -22,8 +62,12 @@ class BookingsNotifier extends StateNotifier<List<Booking>> {
     required DateTime date,
     required TimeSlot timeSlot,
   }) {
+    final bookingId = _isFirebaseConfigured
+        ? FirebaseFirestore.instance.collection(FirestorePaths.userBookings(_uid ?? '0')).doc().id
+        : 'booking-${DateTime.now().microsecondsSinceEpoch}';
+
     final booking = Booking(
-      id: 'booking-${_nextId++}',
+      id: bookingId,
       templeId: templeId,
       templeName: templeName,
       templeImageUrl: templeImageUrl,
@@ -32,10 +76,19 @@ class BookingsNotifier extends StateNotifier<List<Booking>> {
       status: BookingStatus.confirmed,
       createdAt: DateTime.now(),
     );
+
+    // Update locally instantly for optimistic UI
     state = [booking, ...state];
+
+    // Sync to Firestore
+    if (_isFirebaseConfigured && _uid != null) {
+      FirebaseFirestore.instance
+          .collection(FirestorePaths.userBookings(_uid!))
+          .doc(booking.id)
+          .set(booking.toJson());
+    }
   }
 
-  /// Cancels a booking by ID (keeps it in list with cancelled status).
   void cancelBooking(String bookingId) {
     state = [
       for (final b in state)
@@ -44,6 +97,19 @@ class BookingsNotifier extends StateNotifier<List<Booking>> {
         else
           b,
     ];
+
+    if (_isFirebaseConfigured && _uid != null) {
+      FirebaseFirestore.instance
+          .collection(FirestorePaths.userBookings(_uid!))
+          .doc(bookingId)
+          .update({'status': BookingStatus.cancelled.name});
+    }
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 }
 

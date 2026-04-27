@@ -63,4 +63,26 @@ class Booking {
 
   @override
   int get hashCode => id.hashCode;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'templeId': templeId,
+        'templeName': templeName,
+        'templeImageUrl': templeImageUrl,
+        'date': date.toIso8601String(),
+        'timeSlot': timeSlot.name,
+        'status': status.name,
+        'createdAt': createdAt.toIso8601String(),
+      };
+
+  factory Booking.fromJson(Map<String, dynamic> json) => Booking(
+        id: json['id'] as String,
+        templeId: json['templeId'] as String,
+        templeName: json['templeName'] as String,
+        templeImageUrl: json['templeImageUrl'] as String,
+        date: DateTime.parse(json['date'] as String),
+        timeSlot: TimeSlot.values.firstWhere((e) => e.name == json['timeSlot']),
+        status: BookingStatus.values.firstWhere((e) => e.name == json['status']),
+        createdAt: DateTime.parse(json['createdAt'] as String),
+      );
 }
