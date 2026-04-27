@@ -4,10 +4,10 @@ import 'package:goat/core/utils/result.dart';
 import '../../domain/entities/temple.dart';
 import '../../domain/entities/temple_category.dart';
 import '../../domain/repositories/temple_repository.dart';
-import '../datasources/temples_local_datasource.dart';
+import '../datasources/temples_datasource.dart';
 
 class TempleRepositoryImpl implements TempleRepository {
-  final TemplesLocalDatasource _datasource;
+  final TemplesDatasource _datasource;
 
   const TempleRepositoryImpl(this._datasource);
 

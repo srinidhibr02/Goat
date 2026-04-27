@@ -131,9 +131,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/temple/:id',
         name: 'temple-detail',
-        builder: (_, state) {
+        pageBuilder: (context, state) {
           final temple = state.extra as Temple;
-          return TempleDetailPage(temple: temple);
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: TempleDetailPage(temple: temple),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1.0, 0.0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+                child: child,
+              );
+            },
+          );
         },
       ),
 
@@ -141,9 +153,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/book/:templeId',
         name: 'booking-flow',
-        builder: (_, state) {
+        pageBuilder: (context, state) {
           final temple = state.extra as Temple;
-          return BookingFlowPage(temple: temple);
+          return CustomTransitionPage(
+            key: state.pageKey,
+            child: BookingFlowPage(temple: temple),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.0, 1.0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+                child: child,
+              );
+            },
+          );
         },
       ),
 

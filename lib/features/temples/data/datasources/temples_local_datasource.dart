@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 import '../models/temple_model.dart';
+import 'temples_datasource.dart';
 
 /// Loads temple data from the bundled JSON asset.
 ///
 /// To switch to Firestore, implement the same interface using
 /// `cloud_firestore` and swap the provider.
-class TemplesLocalDatasource {
+class TemplesLocalDatasource implements TemplesDatasource {
+  @override
   Future<List<TempleModel>> getTemples() async {
     final jsonString =
         await rootBundle.loadString('assets/data/temples_seed.json');
@@ -18,6 +20,7 @@ class TemplesLocalDatasource {
         .toList();
   }
 
+  @override
   Future<TempleModel> getTempleById(String id) async {
     final temples = await getTemples();
     return temples.firstWhere(
