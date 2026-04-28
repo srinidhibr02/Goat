@@ -48,3 +48,15 @@ final templesProvider = FutureProvider<List<Temple>>((ref) async {
     Err(:final failure) => throw Exception(failure.message),
   };
 });
+
+// ── Single Temple ────────────────────────────────────────────────────────────
+
+/// Fetches a specific temple by ID (used for deep linking).
+final templeByIdProvider = FutureProvider.family<Temple, String>((ref, id) async {
+  final repo = ref.watch(templeRepositoryProvider);
+  final result = await repo.getTempleById(id);
+  return switch (result) {
+    Ok(:final value) => value,
+    Err(:final failure) => throw Exception(failure.message),
+  };
+});

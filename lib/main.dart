@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 
 import 'app.dart';
+import 'core/services/push_notifications_service.dart';
 import 'core/utils/error_handler.dart';
 import 'core/utils/logger.dart';
 import 'features/profile/presentation/providers/profile_providers.dart';
@@ -30,6 +34,28 @@ void main() {
         options: DefaultFirebaseOptions.currentPlatform,
       );
       AppLogger.info('Firebase initialized successfully (goat-d3152)');
+
+      // ── Crashlytics ────────────────────────────────────────────────
+      // Pass all uncaught "fatal" errors from the framework to Crashlytics
+      FlutterError.onError = (errorDetails) {
+        FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+      };
+      // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+      PlatformDispatcher.instance.onError = (error, stack) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true;
+      };
+
+      // ── Firestore Offline Cache ────────────────────────────────────
+      FirebaseFirestore.instance.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+      );
+
+      // ── Push Notifications ─────────────────────────────────────────
+      final pushService = PushNotificationsService();
+      await pushService.init();
+      AppLogger.info('Push notifications initialized');
     } catch (e, st) {
       AppLogger.error(
         'Firebase initialization failed',
