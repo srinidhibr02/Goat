@@ -17,6 +17,7 @@ import 'features/bookings/presentation/pages/booking_flow_page.dart';
 import 'features/bookings/presentation/pages/bookings_page.dart';
 import 'features/profile/presentation/pages/profile_page.dart';
 import 'features/temples/domain/entities/temple.dart';
+import 'features/feed/presentation/pages/feed_page.dart';
 import 'features/temples/presentation/pages/explore_page.dart';
 import 'features/temples/presentation/pages/home_page.dart';
 import 'features/temples/presentation/pages/temple_detail_page.dart';
@@ -201,7 +202,17 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Tab 2: Bookings
+          // Tab 2: Feed
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/feed',
+                name: 'feed',
+                builder: (_, __) => const FeedPage(),
+              ),
+            ],
+          ),
+          // Tab 3: Bookings
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -211,7 +222,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Tab 3: Profile
+          // Tab 4: Profile
           StatefulShellBranch(
             routes: [
               GoRoute(

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../providers/profile_providers.dart';
 
-/// User profile page — avatar, settings, sign out.
+/// User profile page — avatar, settings, edit profile, sign out.
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
@@ -13,7 +14,6 @@ class ProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final user = ref.watch(authStateProvider).valueOrNull;
-    final themeMode = ref.watch(themeProvider);
     final isDark = theme.brightness == Brightness.dark;
 
     final initial = (user?.displayName?.isNotEmpty == true
@@ -28,19 +28,39 @@ class ProfilePage extends ConsumerWidget {
           child: Column(
             children: [
               // ── Avatar + User Info ──────────────────────────────────────
-              CircleAvatar(
-                radius: 48,
-                backgroundColor: AppColors.saffron,
-                backgroundImage: user?.photoUrl != null
-                    ? NetworkImage(user!.photoUrl!)
-                    : null,
-                child: user?.photoUrl == null
-                    ? Text(initial,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 36,
-                            fontWeight: FontWeight.w700))
-                    : null,
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  CircleAvatar(
+                    radius: 48,
+                    backgroundColor: AppColors.saffron,
+                    backgroundImage: user?.photoUrl != null
+                        ? NetworkImage(user!.photoUrl!)
+                        : null,
+                    child: user?.photoUrl == null
+                        ? Text(initial,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 36,
+                                fontWeight: FontWeight.w700))
+                        : null,
+                  ),
+                  GestureDetector(
+                    onTap: () => _showEditProfile(context, ref, user?.uid ?? '',
+                        user?.displayName ?? ''),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.saffron,
+                        border: Border.all(
+                            color: theme.colorScheme.surface, width: 2),
+                      ),
+                      child: const Icon(Icons.edit,
+                          size: 14, color: Colors.white),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               Text(
@@ -56,80 +76,82 @@ class ProfilePage extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               OutlinedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Edit profile coming soon 🙏'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.edit_outlined, size: 18),
+                onPressed: () => _showEditProfile(context, ref,
+                    user?.uid ?? '', user?.displayName ?? ''),
+                icon: const Icon(Icons.edit_outlined, size: 16),
                 label: const Text('Edit Profile'),
               ),
 
-              const SizedBox(height: 32),
-
-              // ── Settings Section ────────────────────────────────────────
-              _SectionHeader(title: 'Appearance'),
+              const SizedBox(height: 28),
+              const Divider(),
               const SizedBox(height: 8),
-              _SettingsTile(
-                icon: Icons.dark_mode_outlined,
+
+              // ── Settings ────────────────────────────────────────────────
+              _SectionHeader(title: 'Preferences'),
+              _SettingTile(
+                icon: isDark ? Icons.dark_mode : Icons.light_mode_outlined,
                 title: 'Dark Mode',
-                trailing: Switch.adaptive(
-                  value: themeMode == ThemeMode.dark ||
-                      (themeMode == ThemeMode.system && isDark),
-                  activeTrackColor: AppColors.saffron,
-                  onChanged: (on) {
-                    ref.read(themeProvider.notifier).toggle(on);
-                  },
+                trailing: Switch(
+                  value: isDark,
+                  activeThumbColor: AppColors.saffron,
+                  onChanged: (val) =>
+                      ref.read(themeProvider.notifier).toggle(val),
+                ),
+              ),
+
+              const SizedBox(height: 8),
+              _SectionHeader(title: 'Account'),
+              _SettingTile(
+                icon: Icons.notifications_outlined,
+                title: 'Notifications',
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Coming soon')),
+                ),
+              ),
+              _SettingTile(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Privacy Policy',
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Coming soon')),
+                ),
+              ),
+              _SettingTile(
+                icon: Icons.help_outline,
+                title: 'Help & Support',
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Coming soon')),
                 ),
               ),
 
               const SizedBox(height: 24),
-              _SectionHeader(title: 'General'),
-              const SizedBox(height: 8),
-              _SettingsTile(
-                icon: Icons.info_outline,
-                title: 'About GOAT',
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _showAbout(context),
-              ),
-              _SettingsTile(
-                icon: Icons.description_outlined,
-                title: 'Terms of Service',
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
-              ),
-              _SettingsTile(
-                icon: Icons.privacy_tip_outlined,
-                title: 'Privacy Policy',
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
+
+              // ── Sign Out ────────────────────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.colorScheme.error,
+                    side: BorderSide(
+                        color: theme.colorScheme.error.withValues(alpha: 0.5)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () =>
+                      ref.read(authControllerProvider.notifier).signOut(),
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Sign Out',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
               ),
 
-              const SizedBox(height: 24),
-              _SectionHeader(title: 'Account'),
-              const SizedBox(height: 8),
-              _SettingsTile(
-                icon: Icons.logout,
-                title: 'Sign Out',
-                iconColor: theme.colorScheme.error,
-                titleColor: theme.colorScheme.error,
-                onTap: () {
-                  ref.read(authControllerProvider.notifier).signOut();
-                },
-              ),
-
-              const SizedBox(height: 32),
-
-              // ── App version ──────────────────────────────────────────────
+              const SizedBox(height: 20),
               Text(
                 'GOAT v1.0.0',
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                ),
               ),
-              const SizedBox(height: 8),
             ],
           ),
         ),
@@ -137,23 +159,137 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  void _showAbout(BuildContext context) {
-    showAboutDialog(
+  void _showEditProfile(
+      BuildContext context, WidgetRef ref, String uid, String currentName) {
+    showModalBottomSheet(
       context: context,
-      applicationName: 'GOAT',
-      applicationVersion: '1.0.0',
-      applicationLegalese: '© 2026 GOAT — Guide Of All Temples',
-      children: [
-        const SizedBox(height: 16),
-        const Text(
-          'Discover, explore, and book visits to the most sacred temples across India.',
-        ),
-      ],
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _EditProfileSheet(uid: uid, currentName: currentName),
     );
   }
 }
 
-// ── Section Header ────────────────────────────────────────────────────────────
+// ── Edit Profile Sheet ────────────────────────────────────────────────────────
+
+class _EditProfileSheet extends ConsumerStatefulWidget {
+  final String uid;
+  final String currentName;
+  const _EditProfileSheet({required this.uid, required this.currentName});
+
+  @override
+  ConsumerState<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
+  late final TextEditingController _nameCtrl;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.currentName);
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final ctrl = ref.watch(profileControllerProvider);
+    final isLoading = ctrl.isLoading;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+            Text('Edit Profile',
+                style: GoogleFonts.inter(
+                    fontSize: 18, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 20),
+
+            TextFormField(
+              controller: _nameCtrl,
+              decoration: InputDecoration(
+                labelText: 'Display Name',
+                prefixIcon: const Icon(Icons.person_outline),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Name cannot be empty' : null,
+            ),
+
+            const SizedBox(height: 20),
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.saffron,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: isLoading ? null : _save,
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child:
+                            CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Save Changes',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    final success = await ref
+        .read(profileControllerProvider.notifier)
+        .updateDisplayName(widget.uid, _nameCtrl.text.trim());
+    if (success && mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile updated 🙏'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+}
+
+// ── Helper Widgets ────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   final String title;
@@ -161,56 +297,55 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        style: Theme.of(context)
-            .textTheme
-            .labelLarge
-            ?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              letterSpacing: 0.5,
-            ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          title.toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
+        ),
       ),
     );
   }
 }
 
-// ── Settings Tile ─────────────────────────────────────────────────────────────
-
-class _SettingsTile extends StatelessWidget {
+class _SettingTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final Widget? trailing;
   final VoidCallback? onTap;
-  final Color? iconColor;
-  final Color? titleColor;
 
-  const _SettingsTile({
+  const _SettingTile({
     required this.icon,
     required this.title,
     this.trailing,
     this.onTap,
-    this.iconColor,
-    this.titleColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return ListTile(
-      leading: Icon(icon,
-          color: iconColor ?? theme.colorScheme.onSurfaceVariant),
-      title: Text(
-        title,
-        style: theme.textTheme.bodyLarge?.copyWith(color: titleColor),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      leading: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 20, color: theme.colorScheme.onSurface),
       ),
-      trailing: trailing,
+      title: Text(title,
+          style: theme.textTheme.bodyMedium
+              ?.copyWith(fontWeight: FontWeight.w500)),
+      trailing: trailing ?? const Icon(Icons.chevron_right, size: 18),
       onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
     );
   }
 }
