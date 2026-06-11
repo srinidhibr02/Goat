@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../temples/presentation/providers/temples_providers.dart';
 import '../../domain/entities/feed_post.dart';
 import '../providers/feed_providers.dart';
 
@@ -160,16 +162,18 @@ class _Chip extends StatelessWidget {
 
 // ── Feed Card ─────────────────────────────────────────────────────────────────
 
-class _FeedCard extends StatelessWidget {
+class _FeedCard extends ConsumerWidget {
   final FeedPost post;
   const _FeedCard({required this.post});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _navigateToTemple(context, ref, post.templeId),
+      child: Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         color: theme.colorScheme.surface,
@@ -297,7 +301,15 @@ class _FeedCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
+  }
+
+  void _navigateToTemple(
+      BuildContext context, WidgetRef ref, String templeId) async {
+    // Try to get from cache first, then navigate
+    final temple = ref.read(templeByIdProvider(templeId)).valueOrNull;
+    context.push('/temple/$templeId', extra: temple);
   }
 
   String _formatRelative(DateTime dt) {
@@ -446,16 +458,51 @@ class _LoadingSkeleton extends StatelessWidget {
   }
 }
 
-class _SkeletonCard extends StatelessWidget {
+class _SkeletonCard extends StatefulWidget {
+  @override
+  State<_SkeletonCard> createState() => _SkeletonCardState();
+}
+
+class _SkeletonCardState extends State<_SkeletonCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context).colorScheme.surfaceContainerHighest;
-    return Container(
-      height: 200,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: base,
-      ),
+    final highlight = Theme.of(context).colorScheme.surface;
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) {
+        final v = _ctrl.value;
+        return Container(
+          height: 200,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            gradient: LinearGradient(
+              begin: Alignment(v * 2 - 1, 0),
+              end: Alignment(v * 2, 0),
+              colors: [base, highlight, base],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+          ),
+        );
+      },
     );
   }
 }

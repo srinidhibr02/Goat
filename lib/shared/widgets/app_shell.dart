@@ -53,6 +53,11 @@ class AppShell extends StatelessWidget {
             label: 'Bookings',
           ),
           NavigationDestination(
+            icon: Icon(Icons.favorite_border),
+            selectedIcon: Icon(Icons.favorite, color: AppColors.saffron),
+            label: 'Favourites',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person, color: AppColors.saffron),
             label: 'Profile',

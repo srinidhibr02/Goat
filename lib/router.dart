@@ -21,6 +21,7 @@ import 'features/feed/presentation/pages/feed_page.dart';
 import 'features/temples/presentation/pages/explore_page.dart';
 import 'features/temples/presentation/pages/home_page.dart';
 import 'features/temples/presentation/pages/temple_detail_page.dart';
+import 'features/temples/presentation/pages/favorites_page.dart';
 import 'shared/widgets/app_shell.dart';
 
 // ── Route names / paths ───────────────────────────────────────────────────────
@@ -222,7 +223,17 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Tab 4: Profile
+          // Tab 4: Favourites
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/favourites',
+                name: 'favourites',
+                builder: (_, __) => const FavoritesPage(),
+              ),
+            ],
+          ),
+          // Tab 5: Profile
           StatefulShellBranch(
             routes: [
               GoRoute(
