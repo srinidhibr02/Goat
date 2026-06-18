@@ -30,6 +30,8 @@ dependencies:
   firebase_messaging: ^15.2.7
   firebase_analytics: ^11.4.2
   firebase_crashlytics: ^4.3.2
+  firebase_storage: ^12.4.4
+
   google_sign_in: ^6.2.1
   flutter_local_notifications: ^17.1.2
 
@@ -37,6 +39,9 @@ dependencies:
   # Utilities
   intl: ^0.20.2
   shared_preferences: ^2.3.0
+  image_picker: ^1.1.2
+  url_launcher: ^6.3.0
+
 
 
 
