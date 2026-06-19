@@ -58,8 +58,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
                     child: TextField(
                       controller: _searchController,
                       focusNode: _focusNode,
-                      onChanged: (v) =>
-                          ref.read(searchQueryProvider.notifier).state = v,
+                      onChanged: (v) => updateSearchQuery(ref, v),
                       decoration: InputDecoration(
                         hintText: 'Search temples, cities, states…',
                         prefixIcon: const Icon(Icons.search),
@@ -68,9 +67,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
                                 icon: const Icon(Icons.close),
                                 onPressed: () {
                                   _searchController.clear();
-                                  ref
-                                      .read(searchQueryProvider.notifier)
-                                      .state = '';
+                                  updateSearchQuery(ref, '');
                                 },
                               )
                             : null,
@@ -169,7 +166,7 @@ class _TempleMapView extends StatelessWidget {
         // OpenStreetMap tiles — no API key required
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          userAgentPackageName: 'com.example.goat',
+          userAgentPackageName: 'com.goat.app',
         ),
         // Temple markers
         MarkerLayer(

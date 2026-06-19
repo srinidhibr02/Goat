@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 import 'package:goat/core/constants/app_constants.dart';
 
@@ -16,9 +17,11 @@ import 'features/bookings/presentation/pages/booking_flow_page.dart';
 import 'features/bookings/presentation/pages/bookings_page.dart';
 import 'features/profile/presentation/pages/profile_page.dart';
 import 'features/temples/domain/entities/temple.dart';
+import 'features/feed/presentation/pages/feed_page.dart';
 import 'features/temples/presentation/pages/explore_page.dart';
 import 'features/temples/presentation/pages/home_page.dart';
 import 'features/temples/presentation/pages/temple_detail_page.dart';
+import 'features/temples/presentation/pages/favorites_page.dart';
 import 'shared/widgets/app_shell.dart';
 
 // ── Route names / paths ───────────────────────────────────────────────────────
@@ -104,6 +107,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     refreshListenable: notifier,
     redirect: notifier.redirect,
+    observers: [
+      FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
+    ],
     routes: [
       // ── Public routes (no bottom nav) ────────────────────────────────
       GoRoute(
@@ -132,10 +138,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/temple/:id',
         name: 'temple-detail',
         pageBuilder: (context, state) {
-          final temple = state.extra as Temple;
+          final id = state.pathParameters['id']!;
+          final temple = state.extra as Temple?;
           return CustomTransitionPage(
             key: state.pageKey,
-            child: TempleDetailPage(temple: temple),
+            child: TempleDetailPage(templeId: id, temple: temple),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return SlideTransition(
                 position: Tween<Offset>(
@@ -196,7 +203,17 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Tab 2: Bookings
+          // Tab 2: Feed
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/feed',
+                name: 'feed',
+                builder: (_, __) => const FeedPage(),
+              ),
+            ],
+          ),
+          // Tab 3: Bookings
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -206,7 +223,17 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Tab 3: Profile
+          // Tab 4: Favourites
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/favourites',
+                name: 'favourites',
+                builder: (_, __) => const FavoritesPage(),
+              ),
+            ],
+          ),
+          // Tab 5: Profile
           StatefulShellBranch(
             routes: [
               GoRoute(

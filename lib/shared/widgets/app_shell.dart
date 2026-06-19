@@ -4,9 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 
 /// Bottom navigation scaffold that wraps tab destinations.
-///
-/// Used by [StatefulShellRoute.indexedStack] in the router to persist
-/// tab state across navigation.
 class AppShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
@@ -45,10 +42,20 @@ class AppShell extends StatelessWidget {
             label: 'Explore',
           ),
           NavigationDestination(
+            icon: Icon(Icons.newspaper_outlined),
+            selectedIcon: Icon(Icons.newspaper, color: AppColors.saffron),
+            label: 'Feed',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
             selectedIcon:
                 Icon(Icons.calendar_today, color: AppColors.saffron),
             label: 'Bookings',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.favorite_border),
+            selectedIcon: Icon(Icons.favorite, color: AppColors.saffron),
+            label: 'Favourites',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),

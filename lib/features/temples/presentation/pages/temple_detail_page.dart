@@ -7,11 +7,54 @@ import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/temple.dart';
 import '../providers/favorites_provider.dart';
 
+import '../providers/temples_providers.dart';
+
 /// Full-screen detail view for a single temple.
 class TempleDetailPage extends ConsumerWidget {
+  final String templeId;
+  final Temple? temple;
+
+  const TempleDetailPage({
+    super.key,
+    required this.templeId,
+    this.temple,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (temple != null) {
+      return _TempleDetailContent(temple: temple!);
+    }
+
+    final templeAsync = ref.watch(templeByIdProvider(templeId));
+    return templeAsync.when(
+      data: (data) => _TempleDetailContent(temple: data),
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48),
+              const SizedBox(height: 16),
+              Text('Failed to load temple',
+                  style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Text(e.toString(), textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TempleDetailContent extends ConsumerWidget {
   final Temple temple;
 
-  const TempleDetailPage({super.key, required this.temple});
+  const _TempleDetailContent({required this.temple});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

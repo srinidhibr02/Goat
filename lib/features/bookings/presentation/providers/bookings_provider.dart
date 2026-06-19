@@ -1,13 +1,31 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/network/firestore_paths.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../data/datasources/booking_datasource.dart';
+import '../../data/datasources/firestore_booking_datasource.dart';
+import '../../data/repositories/booking_repository_impl.dart';
 import '../../domain/entities/booking.dart';
+import '../../domain/repositories/booking_repository.dart';
 
-// ── Bookings State ───────────────────────────────────────────────────────────
+// ── Datasource & Repository ───────────────────────────────────────────────────
+
+final _bookingDatasourceProvider = Provider<BookingDatasource>((ref) {
+  try {
+    Firebase.app();
+    return FirestoreBookingDatasource();
+  } catch (_) {
+    return _InMemoryBookingDatasource();
+  }
+});
+
+final bookingRepositoryProvider = Provider<BookingRepository>(
+  (ref) => BookingRepositoryImpl(ref.watch(_bookingDatasourceProvider)),
+);
+
+// ── State Notifier ────────────────────────────────────────────────────────────
 
 final bookingsProvider =
     StateNotifierProvider<BookingsNotifier, List<Booking>>(
@@ -16,43 +34,21 @@ final bookingsProvider =
 
 class BookingsNotifier extends StateNotifier<List<Booking>> {
   final Ref _ref;
-  StreamSubscription? _sub;
-  String? _uid;
-  bool _isFirebaseConfigured = false;
+  StreamSubscription<List<Booking>>? _sub;
 
   BookingsNotifier(this._ref) : super([]) {
-    try {
-      Firebase.app();
-      _isFirebaseConfigured = true;
-    } catch (_) {}
-
-    _ref.listen(authStateProvider, (prev, next) {
-      final user = next.valueOrNull;
-      if (user?.uid != _uid) {
-        _uid = user?.uid;
-        _initFirestoreSync();
+    _ref.listen(authStateProvider, (_, next) {
+      final uid = next.valueOrNull?.uid;
+      _sub?.cancel();
+      if (uid == null) {
+        state = [];
+        return;
       }
-    });
-  }
-
-  void _initFirestoreSync() {
-    _sub?.cancel();
-    _sub = null;
-
-    if (_uid == null) {
-      state = [];
-      return;
-    }
-
-    if (!_isFirebaseConfigured) return;
-
-    final query = FirebaseFirestore.instance
-        .collection(FirestorePaths.userBookings(_uid!))
-        .orderBy('createdAt', descending: true);
-
-    _sub = query.snapshots().listen((snapshot) {
-      state = snapshot.docs.map((doc) => Booking.fromJson(doc.data())).toList();
-    });
+      _sub = _ref
+          .read(bookingRepositoryProvider)
+          .watchBookings(uid)
+          .listen((bookings) => state = bookings);
+    }, fireImmediately: true);
   }
 
   void createBooking({
@@ -62,12 +58,14 @@ class BookingsNotifier extends StateNotifier<List<Booking>> {
     required DateTime date,
     required TimeSlot timeSlot,
   }) {
-    final bookingId = _isFirebaseConfigured
-        ? FirebaseFirestore.instance.collection(FirestorePaths.userBookings(_uid ?? '0')).doc().id
+    final uid = _ref.read(authStateProvider).valueOrNull?.uid;
+    final repo = _ref.read(bookingRepositoryProvider);
+    final id = uid != null
+        ? repo.generateId(uid)
         : 'booking-${DateTime.now().microsecondsSinceEpoch}';
 
     final booking = Booking(
-      id: bookingId,
+      id: id,
       templeId: templeId,
       templeName: templeName,
       templeImageUrl: templeImageUrl,
@@ -77,32 +75,20 @@ class BookingsNotifier extends StateNotifier<List<Booking>> {
       createdAt: DateTime.now(),
     );
 
-    // Update locally instantly for optimistic UI
+    // Optimistic local update
     state = [booking, ...state];
 
-    // Sync to Firestore
-    if (_isFirebaseConfigured && _uid != null) {
-      FirebaseFirestore.instance
-          .collection(FirestorePaths.userBookings(_uid!))
-          .doc(booking.id)
-          .set(booking.toJson());
-    }
+    if (uid != null) repo.createBooking(uid, booking);
   }
 
   void cancelBooking(String bookingId) {
     state = [
       for (final b in state)
-        if (b.id == bookingId)
-          b.copyWith(status: BookingStatus.cancelled)
-        else
-          b,
+        if (b.id == bookingId) b.copyWith(status: BookingStatus.cancelled) else b,
     ];
-
-    if (_isFirebaseConfigured && _uid != null) {
-      FirebaseFirestore.instance
-          .collection(FirestorePaths.userBookings(_uid!))
-          .doc(bookingId)
-          .update({'status': BookingStatus.cancelled.name});
+    final uid = _ref.read(authStateProvider).valueOrNull?.uid;
+    if (uid != null) {
+      _ref.read(bookingRepositoryProvider).cancelBooking(uid, bookingId);
     }
   }
 
@@ -113,9 +99,8 @@ class BookingsNotifier extends StateNotifier<List<Booking>> {
   }
 }
 
-// ── Derived providers ────────────────────────────────────────────────────────
+// ── Derived providers ─────────────────────────────────────────────────────────
 
-/// Upcoming confirmed bookings sorted by date.
 final upcomingBookingsProvider = Provider<List<Booking>>((ref) {
   final all = ref.watch(bookingsProvider);
   final now = DateTime.now();
@@ -127,7 +112,6 @@ final upcomingBookingsProvider = Provider<List<Booking>>((ref) {
     ..sort((a, b) => a.date.compareTo(b.date));
 });
 
-/// Past or cancelled bookings.
 final pastBookingsProvider = Provider<List<Booking>>((ref) {
   final all = ref.watch(bookingsProvider);
   final now = DateTime.now();
@@ -138,3 +122,33 @@ final pastBookingsProvider = Provider<List<Booking>>((ref) {
       .toList()
     ..sort((a, b) => b.date.compareTo(a.date));
 });
+
+// ── In-Memory fallback (no Firebase) ─────────────────────────────────────────
+
+class _InMemoryBookingDatasource implements BookingDatasource {
+  final _controller =
+      StreamController<List<Booking>>.broadcast();
+  final List<Booking> _store = [];
+
+  @override
+  Stream<List<Booking>> watchBookings(String uid) => _controller.stream;
+
+  @override
+  Future<void> createBooking(String uid, Booking booking) async {
+    _store.insert(0, booking);
+    _controller.add(List.from(_store));
+  }
+
+  @override
+  Future<void> cancelBooking(String uid, String bookingId) async {
+    final idx = _store.indexWhere((b) => b.id == bookingId);
+    if (idx != -1) {
+      _store[idx] = _store[idx].copyWith(status: BookingStatus.cancelled);
+      _controller.add(List.from(_store));
+    }
+  }
+
+  @override
+  String generateId(String uid) =>
+      'booking-${DateTime.now().microsecondsSinceEpoch}';
+}

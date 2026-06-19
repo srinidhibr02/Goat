@@ -180,8 +180,7 @@ class _HeaderState extends ConsumerState<_Header> {
           // Search bar — wired to searchQueryProvider
           TextField(
             controller: _searchController,
-            onChanged: (v) =>
-                ref.read(searchQueryProvider.notifier).state = v,
+            onChanged: (v) => updateSearchQuery(ref, v),
             decoration: InputDecoration(
               hintText: 'Search temples, cities…',
               prefixIcon: const Icon(Icons.search),
@@ -190,7 +189,7 @@ class _HeaderState extends ConsumerState<_Header> {
                       icon: const Icon(Icons.close),
                       onPressed: () {
                         _searchController.clear();
-                        ref.read(searchQueryProvider.notifier).state = '';
+                        updateSearchQuery(ref, '');
                       },
                     )
                   : null,

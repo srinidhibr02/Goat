@@ -2,21 +2,47 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Temples: public read, no client writes ────────────────────────
-    match /temples/{templeId} {
-      allow read: if true;
-      allow write: if false;
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // ── User data: only the authenticated owner ───────────────────────
-    match /users/{userId} {
-      allow read, write: if request.auth != null
-                         && request.auth.uid == userId;
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
 
-      // Favorites and Bookings sub-collections
-      match /{subcollection}/{docId} {
-        allow read, write: if request.auth != null
-                           && request.auth.uid == userId;
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ── Temples ───────────────────────────────────────────────────────────────
+    // Public read; only admins can write.
+    match /temples/{templeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Feed ──────────────────────────────────────────────────────────────────
+    // Public read; only admins can create/update/delete posts.
+    match /feed/{postId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────────
+    // Each user can read/write their own document.
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+
+      // Bookings sub-collection — user owns their bookings.
+      match /bookings/{bookingId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // Favorites sub-collection.
+      match /favorites/{templeId} {
+        allow read, write: if isOwner(uid);
       }
     }
   }
