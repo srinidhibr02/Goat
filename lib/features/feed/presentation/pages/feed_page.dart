@@ -9,7 +9,7 @@ import '../../../temples/presentation/providers/temples_providers.dart';
 import '../../domain/entities/feed_post.dart';
 import '../providers/feed_providers.dart';
 
-/// Devotee news feed — temple announcements, events and festivals.
+/// Devotee news feed — events & announcements from favourited temples.
 class FeedPage extends ConsumerWidget {
   const FeedPage({super.key});
 
@@ -17,6 +17,7 @@ class FeedPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final postsAsync = ref.watch(filteredFeedProvider);
     final selected = ref.watch(selectedFeedTypeProvider);
+    final hasFavs = ref.watch(hasFavouritesProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -40,12 +41,46 @@ class FeedPage extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
               child: Text(
-                'News, events & announcements',
+                hasFavs
+                    ? 'Events & announcements from your favourites'
+                    : 'News, events & announcements from all temples',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
+
+            // ── Favourites banner (shown only when user HAS favourites) ───
+            if (hasFavs)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.saffron.withValues(alpha: 0.08),
+                    border: Border.all(
+                        color: AppColors.saffron.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.favorite,
+                          size: 14, color: AppColors.saffron),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Showing posts from your favourite temples only',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.saffron,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
             // ── Filter chips ──────────────────────────────────────────────
             _FilterBar(selected: selected),
@@ -54,7 +89,7 @@ class FeedPage extends ConsumerWidget {
             Expanded(
               child: postsAsync.when(
                 data: (posts) => posts.isEmpty
-                    ? _EmptyState(selected: selected)
+                    ? _EmptyState(selected: selected, hasFavourites: hasFavs)
                     : RefreshIndicator(
                         onRefresh: () =>
                             ref.refresh(feedPostsProvider.future),
@@ -407,11 +442,74 @@ class _TypeBadge extends StatelessWidget {
 
 class _EmptyState extends StatelessWidget {
   final FeedPostType? selected;
-  const _EmptyState({this.selected});
+  final bool hasFavourites;
+  const _EmptyState({this.selected, required this.hasFavourites});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Case 1: User has no favourite temples yet
+    if (!hasFavourites) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.saffron.withValues(alpha: 0.15),
+                      Colors.redAccent.withValues(alpha: 0.10),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: const Icon(Icons.favorite_border_rounded,
+                    size: 48, color: AppColors.saffron),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'No Favourites Yet',
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Save temples to your favourites and their events, '
+                'festivals and announcements will appear here.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant, height: 1.6),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.saffron,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => context.go('/home'),
+                icon: const Icon(Icons.temple_hindu_outlined, size: 18),
+                label: const Text('Browse Temples',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Case 2: Has favourites but no posts match the selected filter
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -424,13 +522,14 @@ class _EmptyState extends StatelessWidget {
             Text(
               selected != null
                   ? 'No ${selected!.displayName} posts yet'
-                  : 'No posts yet',
+                  : 'No posts from your favourites yet',
               style: theme.textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Check back soon for temple news and announcements.',
+              'Your favourite temples haven\'t posted anything here yet.\nCheck back soon!',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant, height: 1.5),
@@ -441,6 +540,7 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
+
 
 // ── Loading Skeleton ──────────────────────────────────────────────────────────
 

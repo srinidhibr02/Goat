@@ -198,7 +198,7 @@ class _NotifTile extends StatelessWidget {
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
       trailing: Switch(
         value: value,
-        activeColor: AppColors.saffron,
+        activeThumbColor: AppColors.saffron,
         onChanged: onChanged,
       ),
     );
