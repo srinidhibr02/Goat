@@ -16,6 +16,9 @@ import 'features/auth/presentation/providers/auth_providers.dart';
 import 'features/bookings/presentation/pages/booking_flow_page.dart';
 import 'features/bookings/presentation/pages/bookings_page.dart';
 import 'features/profile/presentation/pages/profile_page.dart';
+import 'features/profile/presentation/pages/notifications_page.dart';
+import 'features/profile/presentation/pages/privacy_policy_page.dart';
+import 'features/profile/presentation/pages/help_support_page.dart';
 import 'features/temples/domain/entities/temple.dart';
 import 'features/feed/presentation/pages/feed_page.dart';
 import 'features/temples/presentation/pages/explore_page.dart';
@@ -240,6 +243,23 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/profile',
                 name: 'profile',
                 builder: (_, __) => const ProfilePage(),
+                routes: [
+                  GoRoute(
+                    path: 'notifications',
+                    name: 'notifications',
+                    builder: (_, __) => const NotificationsPage(),
+                  ),
+                  GoRoute(
+                    path: 'privacy-policy',
+                    name: 'privacy-policy',
+                    builder: (_, __) => const PrivacyPolicyPage(),
+                  ),
+                  GoRoute(
+                    path: 'help-support',
+                    name: 'help-support',
+                    builder: (_, __) => const HelpSupportPage(),
+                  ),
+                ],
               ),
             ],
           ),

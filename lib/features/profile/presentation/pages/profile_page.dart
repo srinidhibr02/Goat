@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
@@ -21,33 +25,67 @@ class ProfilePage extends ConsumerWidget {
             : 'D')
         .toUpperCase();
 
+    // Show upload errors
+    ref.listen<AsyncValue<void>>(profileControllerProvider, (_, state) {
+      if (state case AsyncError(:final error)) {
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(SnackBar(
+            content: Text(error.toString()),
+            backgroundColor: theme.colorScheme.error,
+          ));
+      }
+    });
+
+    final isUploading = ref.watch(profileControllerProvider).isLoading;
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
             children: [
-              // ── Avatar + User Info ──────────────────────────────────────
+              // ── Avatar + User Info ────────────────────────────────────────
               Stack(
                 alignment: Alignment.bottomRight,
                 children: [
-                  CircleAvatar(
-                    radius: 48,
-                    backgroundColor: AppColors.saffron,
-                    backgroundImage: user?.photoUrl != null
-                        ? NetworkImage(user!.photoUrl!)
-                        : null,
-                    child: user?.photoUrl == null
-                        ? Text(initial,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 36,
-                                fontWeight: FontWeight.w700))
-                        : null,
+                  // Avatar with loading overlay
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 48,
+                        backgroundColor: AppColors.saffron,
+                        backgroundImage: user?.photoUrl != null
+                            ? NetworkImage(user!.photoUrl!)
+                            : null,
+                        child: user?.photoUrl == null
+                            ? Text(initial,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.w700))
+                            : null,
+                      ),
+                      if (isUploading)
+                        Container(
+                          width: 96,
+                          height: 96,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black38,
+                          ),
+                          child: const CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        ),
+                    ],
                   ),
+                  // Edit badge — taps open avatar picker
                   GestureDetector(
-                    onTap: () => _showEditProfile(context, ref, user?.uid ?? '',
-                        user?.displayName ?? ''),
+                    onTap: isUploading
+                        ? null
+                        : () => _pickAndUploadAvatar(context, ref,
+                            user?.uid ?? ''),
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
@@ -56,7 +94,7 @@ class ProfilePage extends ConsumerWidget {
                         border: Border.all(
                             color: theme.colorScheme.surface, width: 2),
                       ),
-                      child: const Icon(Icons.edit,
+                      child: const Icon(Icons.camera_alt,
                           size: 14, color: Colors.white),
                     ),
                   ),
@@ -86,7 +124,7 @@ class ProfilePage extends ConsumerWidget {
               const Divider(),
               const SizedBox(height: 8),
 
-              // ── Settings ────────────────────────────────────────────────
+              // ── Preferences ───────────────────────────────────────────────
               _SectionHeader(title: 'Preferences'),
               _SettingTile(
                 icon: isDark ? Icons.dark_mode : Icons.light_mode_outlined,
@@ -104,28 +142,22 @@ class ProfilePage extends ConsumerWidget {
               _SettingTile(
                 icon: Icons.notifications_outlined,
                 title: 'Notifications',
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Coming soon')),
-                ),
+                onTap: () => context.push('/profile/notifications'),
               ),
               _SettingTile(
                 icon: Icons.privacy_tip_outlined,
                 title: 'Privacy Policy',
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Coming soon')),
-                ),
+                onTap: () => context.push('/profile/privacy-policy'),
               ),
               _SettingTile(
                 icon: Icons.help_outline,
                 title: 'Help & Support',
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Coming soon')),
-                ),
+                onTap: () => context.push('/profile/help-support'),
               ),
 
               const SizedBox(height: 24),
 
-              // ── Sign Out ────────────────────────────────────────────────
+              // ── Sign Out ──────────────────────────────────────────────────
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
@@ -149,7 +181,8 @@ class ProfilePage extends ConsumerWidget {
               Text(
                 'GOAT v1.0.0',
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  color: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -158,6 +191,73 @@ class ProfilePage extends ConsumerWidget {
       ),
     );
   }
+
+  // ── Avatar picker ───────────────────────────────────────────────────────────
+
+  Future<void> _pickAndUploadAvatar(
+      BuildContext context, WidgetRef ref, String uid) async {
+    final choice = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take Photo'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (choice == null) return;
+
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: choice,
+      imageQuality: 80,
+      maxWidth: 512,
+      maxHeight: 512,
+    );
+
+    if (picked == null) return;
+    if (!context.mounted) return;
+
+    final url = await ref
+        .read(profileControllerProvider.notifier)
+        .uploadAvatar(uid, File(picked.path));
+
+    if (url != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile photo updated 🙏'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  // ── Edit name sheet ─────────────────────────────────────────────────────────
 
   void _showEditProfile(
       BuildContext context, WidgetRef ref, String uid, String currentName) {
@@ -213,7 +313,6 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle
             Center(
               child: Container(
                 width: 40,
@@ -225,12 +324,10 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                 ),
               ),
             ),
-
             Text('Edit Profile',
                 style: GoogleFonts.inter(
                     fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 20),
-
             TextFormField(
               controller: _nameCtrl,
               decoration: InputDecoration(
@@ -242,9 +339,7 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Name cannot be empty' : null,
             ),
-
             const SizedBox(height: 20),
-
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -260,10 +355,11 @@ class _EditProfileSheetState extends ConsumerState<_EditProfileSheet> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child:
-                            CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
                     : const Text('Save Changes',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 15)),
               ),
             ),
           ],
@@ -342,8 +438,8 @@ class _SettingTile extends StatelessWidget {
         child: Icon(icon, size: 20, color: theme.colorScheme.onSurface),
       ),
       title: Text(title,
-          style: theme.textTheme.bodyMedium
-              ?.copyWith(fontWeight: FontWeight.w500)),
+          style:
+              theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
       trailing: trailing ?? const Icon(Icons.chevron_right, size: 18),
       onTap: onTap,
     );
