@@ -92,7 +92,7 @@ class FeedPage extends ConsumerWidget {
                     ? _EmptyState(selected: selected, hasFavourites: hasFavs)
                     : RefreshIndicator(
                         onRefresh: () =>
-                            ref.refresh(feedPostsProvider.future),
+                            ref.read(feedPostsProvider.notifier).refresh(),
                         child: ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                           itemCount: posts.length,

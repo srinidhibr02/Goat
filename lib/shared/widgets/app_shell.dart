@@ -3,7 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 
-/// Bottom navigation scaffold that wraps tab destinations.
+/// Bottom navigation scaffold — 4 tabs: Home, Explore, Bookings, Favourites.
+/// Profile is accessed via the avatar button on the Home page header.
 class AppShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
@@ -32,19 +33,14 @@ class AppShell extends StatelessWidget {
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.temple_hindu_outlined),
-            selectedIcon: Icon(Icons.temple_hindu, color: AppColors.saffron),
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home, color: AppColors.saffron),
             label: 'Home',
           ),
           NavigationDestination(
             icon: Icon(Icons.explore_outlined),
             selectedIcon: Icon(Icons.explore, color: AppColors.saffron),
             label: 'Explore',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.newspaper_outlined),
-            selectedIcon: Icon(Icons.newspaper, color: AppColors.saffron),
-            label: 'Feed',
           ),
           NavigationDestination(
             icon: Icon(Icons.calendar_today_outlined),
@@ -56,11 +52,6 @@ class AppShell extends StatelessWidget {
             icon: Icon(Icons.favorite_border),
             selectedIcon: Icon(Icons.favorite, color: AppColors.saffron),
             label: 'Favourites',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: AppColors.saffron),
-            label: 'Profile',
           ),
         ],
       ),

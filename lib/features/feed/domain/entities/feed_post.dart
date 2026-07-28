@@ -31,6 +31,15 @@ class FeedPost {
   /// Optional hero image for the post.
   final String? imageUrl;
 
+  /// Number of likes on this post.
+  final int likeCount;
+
+  /// UIDs of users who liked this post (used to check if current user liked).
+  final List<String> likedBy;
+
+  /// Number of comments on this post.
+  final int commentCount;
+
   const FeedPost({
     required this.id,
     required this.templeId,
@@ -42,7 +51,34 @@ class FeedPost {
     required this.publishedAt,
     this.eventDate,
     this.imageUrl,
+    this.likeCount = 0,
+    this.likedBy = const [],
+    this.commentCount = 0,
   });
+
+  bool isLikedBy(String uid) => likedBy.contains(uid);
+
+  FeedPost copyWith({
+    int? likeCount,
+    List<String>? likedBy,
+    int? commentCount,
+  }) {
+    return FeedPost(
+      id: id,
+      templeId: templeId,
+      templeName: templeName,
+      templeImageUrl: templeImageUrl,
+      title: title,
+      body: body,
+      type: type,
+      publishedAt: publishedAt,
+      eventDate: eventDate,
+      imageUrl: imageUrl,
+      likeCount: likeCount ?? this.likeCount,
+      likedBy: likedBy ?? this.likedBy,
+      commentCount: commentCount ?? this.commentCount,
+    );
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -50,4 +86,26 @@ class FeedPost {
 
   @override
   int get hashCode => id.hashCode;
+}
+
+/// A single comment on a feed post.
+@immutable
+class FeedComment {
+  final String id;
+  final String postId;
+  final String uid;
+  final String displayName;
+  final String? photoUrl;
+  final String text;
+  final DateTime createdAt;
+
+  const FeedComment({
+    required this.id,
+    required this.postId,
+    required this.uid,
+    required this.displayName,
+    this.photoUrl,
+    required this.text,
+    required this.createdAt,
+  });
 }

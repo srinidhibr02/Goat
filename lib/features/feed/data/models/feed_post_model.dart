@@ -13,6 +13,9 @@ class FeedPostModel extends FeedPost {
     required super.publishedAt,
     super.eventDate,
     super.imageUrl,
+    super.likeCount,
+    super.likedBy,
+    super.commentCount,
   });
 
   factory FeedPostModel.fromJson(Map<String, dynamic> json) => FeedPostModel(
@@ -26,12 +29,28 @@ class FeedPostModel extends FeedPost {
           (e) => e.name == json['type'],
           orElse: () => FeedPostType.news,
         ),
-        publishedAt: DateTime.parse(json['publishedAt'] as String),
+        publishedAt: _parseDate(json['publishedAt']),
         eventDate: json['eventDate'] != null
-            ? DateTime.parse(json['eventDate'] as String)
+            ? _parseDate(json['eventDate'])
             : null,
         imageUrl: json['imageUrl'] as String?,
+        likeCount: (json['likeCount'] as int?) ?? 0,
+        likedBy: (json['likedBy'] as List<dynamic>?)
+                ?.map((e) => e as String)
+                .toList() ??
+            [],
+        commentCount: (json['commentCount'] as int?) ?? 0,
       );
+
+  static DateTime _parseDate(dynamic value) {
+    if (value is String) return DateTime.parse(value);
+    // Firestore Timestamp
+    try {
+      return (value as dynamic).toDate() as DateTime;
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -44,5 +63,33 @@ class FeedPostModel extends FeedPost {
         'publishedAt': publishedAt.toIso8601String(),
         'eventDate': eventDate?.toIso8601String(),
         'imageUrl': imageUrl,
+        'likeCount': likeCount,
+        'likedBy': likedBy,
+        'commentCount': commentCount,
       };
+}
+
+/// Data model for a [FeedComment].
+class FeedCommentModel extends FeedComment {
+  const FeedCommentModel({
+    required super.id,
+    required super.postId,
+    required super.uid,
+    required super.displayName,
+    super.photoUrl,
+    required super.text,
+    required super.createdAt,
+  });
+
+  factory FeedCommentModel.fromJson(String id, String postId,
+      Map<String, dynamic> json) =>
+      FeedCommentModel(
+        id: id,
+        postId: postId,
+        uid: json['uid'] as String,
+        displayName: json['displayName'] as String,
+        photoUrl: json['photoUrl'] as String?,
+        text: json['text'] as String,
+        createdAt: FeedPostModel._parseDate(json['createdAt']),
+      );
 }

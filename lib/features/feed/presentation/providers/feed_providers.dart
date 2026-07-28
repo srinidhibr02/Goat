@@ -28,13 +28,80 @@ final feedRepositoryProvider = Provider<FeedRepository>(
 
 // ── Feed posts ────────────────────────────────────────────────────────────────
 
-/// All posts from ALL temples, newest first (used internally).
-final feedPostsProvider = FutureProvider<List<FeedPost>>((ref) {
-  return ref.watch(feedRepositoryProvider).getPosts();
-});
+/// All posts from ALL temples, newest first.
+/// Kept as a [StateNotifierProvider] so toggling likes updates in-place.
+final feedPostsProvider =
+    StateNotifierProvider<FeedPostsNotifier, AsyncValue<List<FeedPost>>>(
+  (ref) => FeedPostsNotifier(ref.watch(feedRepositoryProvider)),
+);
+
+class FeedPostsNotifier
+    extends StateNotifier<AsyncValue<List<FeedPost>>> {
+  final FeedRepository _repo;
+  FeedPostsNotifier(this._repo) : super(const AsyncLoading()) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final posts = await _repo.getPosts();
+      if (mounted) state = AsyncData(posts);
+    } catch (e, st) {
+      if (mounted) state = AsyncError(e, st);
+    }
+  }
+
+  Future<void> refresh() => _load();
+
+  /// Toggles like for [uid] on [postId] and patches the list in-place.
+  Future<void> toggleLike(String postId, String uid) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    // Optimistic update
+    final optimistic = current.map((p) {
+      if (p.id != postId) return p;
+      final alreadyLiked = p.isLikedBy(uid);
+      final newLikedBy = List<String>.from(p.likedBy);
+      if (alreadyLiked) {
+        newLikedBy.remove(uid);
+      } else {
+        newLikedBy.add(uid);
+      }
+      return p.copyWith(likedBy: newLikedBy, likeCount: newLikedBy.length);
+    }).toList();
+    state = AsyncData(optimistic);
+
+    // Persist to backend
+    try {
+      final updated = await _repo.toggleLike(postId, uid);
+      final confirmed = (state.valueOrNull ?? []).map((p) {
+        return p.id == postId ? updated : p;
+      }).toList();
+      if (mounted) state = AsyncData(confirmed);
+    } catch (_) {
+      // Roll back on error
+      if (mounted) state = AsyncData(current);
+    }
+  }
+
+  /// Increments commentCount locally after a comment is added.
+  void onCommentAdded(String postId) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData(current.map((p) {
+      if (p.id != postId) return p;
+      return p.copyWith(commentCount: p.commentCount + 1);
+    }).toList());
+  }
+}
+
+// ── Post-type filter chip ─────────────────────────────────────────────────────
 
 /// Currently selected filter chip type (null = All).
 final selectedFeedTypeProvider = StateProvider<FeedPostType?>((ref) => null);
+
+// ── Derived: favourites-filtered feed ────────────────────────────────────────
 
 /// `true` when the user has at least one favourited temple.
 final hasFavouritesProvider = Provider<bool>(
@@ -43,23 +110,24 @@ final hasFavouritesProvider = Provider<bool>(
 
 /// Posts from the user's **favourited temples only**, filtered by
 /// [selectedFeedTypeProvider].
-///
-/// Falls back to showing all posts when the user has no favourites yet
-/// (so new users don't see a blank feed on first launch).
-final filteredFeedProvider = FutureProvider<List<FeedPost>>((ref) async {
-  final all = await ref.watch(feedPostsProvider.future);
+/// Falls back to all posts when the user has no favourites yet.
+final filteredFeedProvider = Provider<AsyncValue<List<FeedPost>>>((ref) {
+  final allAsync = ref.watch(feedPostsProvider);
   final favIds = ref.watch(favoritesProvider);
   final selected = ref.watch(selectedFeedTypeProvider);
 
-  // Filter to favourite temples (fallback to all if no favourites yet)
-  final byFav = favIds.isEmpty
-      ? all
-      : all.where((p) => favIds.contains(p.templeId)).toList();
-
-  // Apply post-type filter chip
-  final filtered =
-      selected == null ? byFav : byFav.where((p) => p.type == selected).toList();
-
-  return filtered;
+  return allAsync.whenData((all) {
+    final byFav = favIds.isEmpty
+        ? all
+        : all.where((p) => favIds.contains(p.templeId)).toList();
+    return selected == null
+        ? byFav
+        : byFav.where((p) => p.type == selected).toList();
+  });
 });
 
+// ── Comments ─────────────────────────────────────────────────────────────────
+
+final commentsProvider = FutureProvider.family<List<FeedComment>, String>(
+  (ref, postId) => ref.watch(feedRepositoryProvider).getComments(postId),
+);
