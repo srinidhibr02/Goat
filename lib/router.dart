@@ -20,7 +20,6 @@ import 'features/profile/presentation/pages/notifications_page.dart';
 import 'features/profile/presentation/pages/privacy_policy_page.dart';
 import 'features/profile/presentation/pages/help_support_page.dart';
 import 'features/temples/domain/entities/temple.dart';
-import 'features/feed/presentation/pages/feed_page.dart';
 import 'features/temples/presentation/pages/explore_page.dart';
 import 'features/temples/presentation/pages/home_page.dart';
 import 'features/temples/presentation/pages/temple_detail_page.dart';
@@ -104,7 +103,6 @@ final routerNotifierProvider = Provider<RouterNotifier>((ref) {
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider);
 
-
   return GoRouter(
     debugLogDiagnostics: false,
     initialLocation: '/',
@@ -114,7 +112,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
     ],
     routes: [
-      // ── Public routes (no bottom nav) ────────────────────────────────
+      // ── Public routes (no bottom nav) ─────────────────────────────────
       GoRoute(
         path: '/',
         name: 'splash',
@@ -136,7 +134,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ForgotPasswordPage(),
       ),
 
-      // ── Detail page (no bottom nav) ──────────────────────────────────
+      // ── Profile (push, no bottom nav) ─────────────────────────────────
+      GoRoute(
+        path: '/profile',
+        name: 'profile',
+        builder: (_, __) => const ProfilePage(),
+        routes: [
+          GoRoute(
+            path: 'notifications',
+            name: 'notifications',
+            builder: (_, __) => const NotificationsPage(),
+          ),
+          GoRoute(
+            path: 'privacy-policy',
+            name: 'privacy-policy',
+            builder: (_, __) => const PrivacyPolicyPage(),
+          ),
+          GoRoute(
+            path: 'help-support',
+            name: 'help-support',
+            builder: (_, __) => const HelpSupportPage(),
+          ),
+        ],
+      ),
+
+      // ── Temple detail (push, no bottom nav) ───────────────────────────
       GoRoute(
         path: '/temple/:id',
         name: 'temple-detail',
@@ -159,7 +181,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // ── Booking flow (no bottom nav) ─────────────────────────────────
+      // ── Booking flow (push, no bottom nav) ────────────────────────────
       GoRoute(
         path: '/book/:templeId',
         name: 'booking-flow',
@@ -181,12 +203,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // ── Tabbed shell (bottom nav) ────────────────────────────────────
+      // ── Tabbed shell — 4 tabs (Home, Explore, Bookings, Favourites) ───
       StatefulShellRoute.indexedStack(
         builder: (_, __, navigationShell) =>
             AppShell(navigationShell: navigationShell),
         branches: [
-          // Tab 0: Home
+          // Tab 0: Home (temple grid + feed)
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -206,17 +228,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Tab 2: Feed
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/feed',
-                name: 'feed',
-                builder: (_, __) => const FeedPage(),
-              ),
-            ],
-          ),
-          // Tab 3: Bookings
+          // Tab 2: Bookings
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -226,40 +238,13 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Tab 4: Favourites
+          // Tab 3: Favourites
           StatefulShellBranch(
             routes: [
               GoRoute(
                 path: '/favourites',
                 name: 'favourites',
                 builder: (_, __) => const FavoritesPage(),
-              ),
-            ],
-          ),
-          // Tab 5: Profile
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/profile',
-                name: 'profile',
-                builder: (_, __) => const ProfilePage(),
-                routes: [
-                  GoRoute(
-                    path: 'notifications',
-                    name: 'notifications',
-                    builder: (_, __) => const NotificationsPage(),
-                  ),
-                  GoRoute(
-                    path: 'privacy-policy',
-                    name: 'privacy-policy',
-                    builder: (_, __) => const PrivacyPolicyPage(),
-                  ),
-                  GoRoute(
-                    path: 'help-support',
-                    name: 'help-support',
-                    builder: (_, __) => const HelpSupportPage(),
-                  ),
-                ],
               ),
             ],
           ),
