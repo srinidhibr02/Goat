@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
     function isSignedIn() {
       return request.auth != null;
     }
@@ -16,18 +16,41 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Validates that only allowed fields are being written (prevents mass-assignment)
+    function hasOnly(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
     // ── Temples ───────────────────────────────────────────────────────────────
-    // Public read; only admins can write.
+    // Public read; only admins can create/update/delete.
     match /temples/{templeId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
     // ── Feed ──────────────────────────────────────────────────────────────────
-    // Public read; only admins can create/update/delete posts.
+    // Public read; only admins can create/delete posts.
+    // Authenticated users can toggle their own like (update likedBy + likeCount only).
     match /feed/{postId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() ||
+        // Allow any signed-in user to update only the like fields
+        (isSignedIn() && hasOnly(['likedBy', 'likeCount']));
+
+      // Comments sub-collection — any signed-in user can read/add.
+      // Users can delete their own comments; admins can delete any.
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() &&
+          request.resource.data.uid == request.auth.uid &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.text.size() <= 500;
+        allow delete: if isSignedIn() &&
+          (resource.data.uid == request.auth.uid || isAdmin());
+        allow update: if false; // Comments are immutable
+      }
     }
 
     // ── Users ─────────────────────────────────────────────────────────────────

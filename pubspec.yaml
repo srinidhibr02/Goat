@@ -50,6 +50,7 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
 
 
 
@@ -59,4 +60,20 @@ flutter:
   assets:
     - assets/images/
     - assets/images/logo/
+    - assets/icon/
     - assets/data/
+
+# ── App Icon ─────────────────────────────────────────────────────────────────
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#FFDD00"
+  adaptive_icon_foreground: "assets/icon/icon.png"
+  web:
+    generate: false
+  windows:
+    generate: false
+  macos:
+    generate: false
