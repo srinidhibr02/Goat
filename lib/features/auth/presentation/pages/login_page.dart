@@ -206,12 +206,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     label: 'Google',
                     onTap: isLoading ? null : _signInWithGoogle,
                   ),
-                  const SizedBox(width: 16),
-                  _SocialButton(
-                    icon: Icons.phone_android,
-                    label: 'Phone',
-                    onTap: () {}, // TODO: phone auth
-                  ),
                 ],
               ),
               const SizedBox(height: 32),
