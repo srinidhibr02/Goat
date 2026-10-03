@@ -11,7 +11,7 @@ class MockFeedDatasource implements FeedDatasource {
     return [
       FeedPost(
         id: 'f1',
-        templeId: 't1',
+        templeId: '1',
         templeName: 'Tirumala Venkateswara Temple',
         templeImageUrl:
             'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Tirumala_temple_view.jpg/640px-Tirumala_temple_view.jpg',
@@ -29,7 +29,7 @@ class MockFeedDatasource implements FeedDatasource {
       ),
       FeedPost(
         id: 'f2',
-        templeId: 't2',
+        templeId: '6',
         templeName: 'Meenakshi Amman Temple',
         templeImageUrl:
             'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Madurai_Meenakshi_Amman_Temple_%28edit2%29.jpg/640px-Madurai_Meenakshi_Amman_Temple_%28edit2%29.jpg',
@@ -45,12 +45,12 @@ class MockFeedDatasource implements FeedDatasource {
       ),
       FeedPost(
         id: 'f3',
-        templeId: 't3',
-        templeName: 'Siddhivinayak Temple',
+        templeId: '8',
+        templeName: 'Jagannath Temple',
         title: 'Online Darshan Booking Now Available',
         body:
-            'Siddhivinayak Temple Trust is pleased to announce that devotees can now book '
-            'darshan slots online. Walk-in queues will continue to be available on Tuesdays.',
+            'The Jagannath Temple Trust is pleased to announce that devotees can now book '
+            'darshan slots online. Walk-in queues will continue to be available on Mondays.',
         type: FeedPostType.announcement,
         publishedAt: now.subtract(const Duration(days: 1)),
         likeCount: 88,
@@ -58,7 +58,7 @@ class MockFeedDatasource implements FeedDatasource {
       ),
       FeedPost(
         id: 'f4',
-        templeId: 't4',
+        templeId: '4',
         templeName: 'Somnath Temple',
         title: 'Restoration of the Western Gopuram Complete',
         body:
@@ -71,7 +71,7 @@ class MockFeedDatasource implements FeedDatasource {
       ),
       FeedPost(
         id: 'f5',
-        templeId: 't1',
+        templeId: '1',
         templeName: 'Tirumala Venkateswara Temple',
         title: 'Dress Code Reminder for All Devotees',
         body:
@@ -84,8 +84,8 @@ class MockFeedDatasource implements FeedDatasource {
       ),
       FeedPost(
         id: 'f6',
-        templeId: 't5',
-        templeName: 'Golden Temple',
+        templeId: '2',
+        templeName: 'Harmandir Sahib (Golden Temple)',
         title: 'Guru Nanak Jayanti — Community Langar',
         body:
             'A grand community Langar will be organised on Guru Nanak Jayanti. '
@@ -98,7 +98,7 @@ class MockFeedDatasource implements FeedDatasource {
       ),
       FeedPost(
         id: 'f7',
-        templeId: 't6',
+        templeId: '5',
         templeName: 'Kashi Vishwanath Temple',
         title: 'New Corridor Expansion Opens to Devotees',
         body:

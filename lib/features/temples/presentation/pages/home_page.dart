@@ -9,21 +9,17 @@ import '../../../auth/domain/entities/app_user.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../feed/domain/entities/feed_post.dart';
 import '../../../feed/presentation/providers/feed_providers.dart';
-import '../../domain/entities/temple_category.dart';
-import '../providers/search_provider.dart';
-import '../providers/temples_providers.dart';
-import '../widgets/temple_card.dart';
 
-/// Unified home screen — Events & Updates feed at top, temple browse below.
-/// Profile is accessed by tapping the avatar on the top-right.
+/// Home screen — shows greeting header (with search + avatar icons) and
+/// the Events & Updates feed only.
+///
+/// Tapping the search icon pushes [BrowseTemplesPage] (/browse).
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateProvider).valueOrNull;
-    final selectedCategory = ref.watch(selectedCategoryProvider);
-    final templesAsync = ref.watch(filteredTemplesProvider);
     final feedAsync = ref.watch(filteredFeedProvider);
     final hasFavs = ref.watch(hasFavouritesProvider);
     final selectedType = ref.watch(selectedFeedTypeProvider);
@@ -31,16 +27,13 @@ class HomePage extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(filteredTemplesProvider);
-            await ref.read(feedPostsProvider.notifier).refresh();
-          },
+          onRefresh: () => ref.read(feedPostsProvider.notifier).refresh(),
           child: CustomScrollView(
             slivers: [
-              // ── Greeting header ──────────────────────────────────────────
+              // ── Header ──────────────────────────────────────────────────
               SliverToBoxAdapter(child: _Header(user: user)),
 
-              // ── Events & Updates ─────────────────────────────────────────
+              // ── Events & Updates section title ───────────────────────────
               SliverToBoxAdapter(
                 child: _FeedSectionHeader(
                   hasFavourites: hasFavs,
@@ -48,18 +41,18 @@ class HomePage extends ConsumerWidget {
                 ),
               ),
 
-              // Feed type filter chips
+              // ── Type filter chips ────────────────────────────────────────
               SliverToBoxAdapter(
                 child: _FeedFilterBar(selected: selectedType),
               ),
 
-              // Feed cards
+              // ── Feed cards ───────────────────────────────────────────────
               feedAsync.when(
                 data: (posts) => posts.isEmpty
                     ? SliverToBoxAdapter(
                         child: _FeedEmptyState(hasFavourites: hasFavs))
                     : SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                         sliver: SliverList.separated(
                           itemCount: posts.length,
                           separatorBuilder: (_, __) =>
@@ -70,90 +63,12 @@ class HomePage extends ConsumerWidget {
                       ),
                 loading: () => const SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32),
+                    padding: EdgeInsets.symmetric(vertical: 48),
                     child: Center(child: CircularProgressIndicator()),
                   ),
                 ),
-                error: (_, __) => const SliverToBoxAdapter(
-                    child: SizedBox.shrink()),
-              ),
-
-              // ── Divider before temple browse ─────────────────────────────
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(20, 24, 20, 0),
-                  child: Divider(),
-                ),
-              ),
-
-              // ── Browse Temples header ────────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                  child: Text(
-                    'Browse Temples',
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                ),
-              ),
-
-              // Temple search bar
-              SliverToBoxAdapter(child: _SearchBar()),
-
-              // Category chips
-              SliverToBoxAdapter(
-                child: _CategoryFilter(selected: selectedCategory),
-              ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 8)),
-
-              // Temple grid
-              templesAsync.when(
-                data: (temples) => temples.isEmpty
-                    ? const SliverToBoxAdapter(child: _TempleEmptyState())
-                    : SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-                        sliver: SliverGrid.builder(
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 12,
-                            crossAxisSpacing: 12,
-                            childAspectRatio: 0.78,
-                          ),
-                          itemCount: temples.length,
-                          itemBuilder: (_, i) =>
-                              TempleCard(temple: temples[i]),
-                        ),
-                      ),
-                loading: () => const SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                ),
-                error: (e, _) => SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.error_outline, size: 40),
-                        const SizedBox(height: 8),
-                        Text('Failed to load temples',
-                            style: Theme.of(context).textTheme.bodyMedium),
-                        TextButton(
-                          onPressed: () =>
-                              ref.invalidate(filteredTemplesProvider),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                error: (_, __) =>
+                    const SliverToBoxAdapter(child: SizedBox.shrink()),
               ),
             ],
           ),
@@ -163,7 +78,7 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-// ── Greeting Header ───────────────────────────────────────────────────────────
+// ── Header ────────────────────────────────────────────────────────────────────
 
 class _Header extends ConsumerWidget {
   final AppUser? user;
@@ -185,9 +100,10 @@ class _Header extends ConsumerWidget {
         .toUpperCase();
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+      padding: const EdgeInsets.fromLTRB(20, 20, 16, 8),
       child: Row(
         children: [
+          // Greeting + name
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,6 +122,26 @@ class _Header extends ConsumerWidget {
               ],
             ),
           ),
+
+          // Search icon → Browse Temples page
+          Tooltip(
+            message: 'Browse Temples',
+            child: IconButton(
+              onPressed: () => context.push('/browse'),
+              icon: const Icon(Icons.search_rounded),
+              iconSize: 26,
+              style: IconButton.styleFrom(
+                foregroundColor: theme.colorScheme.onSurface,
+                backgroundColor:
+                    theme.colorScheme.surfaceContainerHighest,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
           // Avatar → Profile
           Tooltip(
             message: 'Profile',
@@ -220,11 +156,14 @@ class _Header extends ConsumerWidget {
                 child: user?.photoUrl == null
                     ? Text(initial,
                         style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w700))
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700))
                     : null,
               ),
             ),
           ),
+
+          const SizedBox(width: 4),
         ],
       ),
     );
@@ -243,7 +182,7 @@ class _FeedSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
       child: Row(
         children: [
           Expanded(
@@ -266,8 +205,9 @@ class _FeedSectionHeader extends StatelessWidget {
                     color: hasFavourites
                         ? AppColors.saffron
                         : theme.colorScheme.onSurfaceVariant,
-                    fontWeight:
-                        hasFavourites ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: hasFavourites
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                   ),
                 ),
               ],
@@ -343,7 +283,8 @@ class _FeedChip extends StatelessWidget {
               ? AppColors.saffron
               : Theme.of(context).colorScheme.outlineVariant,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: Colors.transparent,
       ),
     );
@@ -395,7 +336,7 @@ class _FeedCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Type badge + temple name row
+                // Type badge + temple name
                 Row(
                   children: [
                     GestureDetector(
@@ -451,7 +392,7 @@ class _FeedCard extends ConsumerWidget {
 
                 const SizedBox(height: 4),
 
-                // Body preview
+                // Body
                 Text(
                   post.body,
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -495,10 +436,9 @@ class _FeedCard extends ConsumerWidget {
                 const Divider(height: 1),
                 const SizedBox(height: 4),
 
-                // ── Action row: Like + Comment ───────────────────────────
+                // Action row
                 Row(
                   children: [
-                    // Like button
                     _ActionButton(
                       icon: isLiked
                           ? Icons.favorite
@@ -511,10 +451,7 @@ class _FeedCard extends ConsumerWidget {
                               .read(feedPostsProvider.notifier)
                               .toggleLike(post.id, uid),
                     ),
-
                     const SizedBox(width: 4),
-
-                    // Comment button
                     _ActionButton(
                       icon: Icons.chat_bubble_outline,
                       label: _compactCount(post.commentCount),
@@ -556,26 +493,20 @@ class _FeedCard extends ConsumerWidget {
   }
 }
 
-// ── Action button (Like / Comment) ────────────────────────────────────────────
+// ── Action button ─────────────────────────────────────────────────────────────
 
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color? color;
   final VoidCallback? onTap;
-
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    this.color,
-    this.onTap,
-  });
+  const _ActionButton(
+      {required this.icon, required this.label, this.color, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final iconColor =
-        color ?? theme.colorScheme.onSurfaceVariant;
+    final iconColor = color ?? theme.colorScheme.onSurfaceVariant;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -587,11 +518,9 @@ class _ActionButton extends StatelessWidget {
             Icon(icon, size: 18, color: iconColor),
             if (label.isNotEmpty) ...[
               const SizedBox(width: 4),
-              Text(
-                label,
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: iconColor, fontWeight: FontWeight.w600),
-              ),
+              Text(label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                      color: iconColor, fontWeight: FontWeight.w600)),
             ],
           ],
         ),
@@ -600,7 +529,7 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-// ── Comments Bottom Sheet ─────────────────────────────────────────────────────
+// ── Comments Sheet ────────────────────────────────────────────────────────────
 
 class _CommentsSheet extends ConsumerStatefulWidget {
   final FeedPost post;
@@ -625,7 +554,6 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
     final text = _ctrl.text.trim();
     if (text.isEmpty || widget.currentUser == null) return;
     setState(() => _submitting = true);
-
     try {
       await ref.read(feedRepositoryProvider).addComment(
             postId: widget.post.id,
@@ -635,9 +563,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
             text: text,
           );
       _ctrl.clear();
-      // Patch comment count in the feed list
       ref.read(feedPostsProvider.notifier).onCommentAdded(widget.post.id);
-      // Refresh the comments for this post
       ref.invalidate(commentsProvider(widget.post.id));
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -661,7 +587,6 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
         ),
         child: Column(
           children: [
-            // Handle
             const SizedBox(height: 8),
             Container(
               width: 40,
@@ -672,30 +597,21 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
               ),
             ),
             const SizedBox(height: 12),
-
-            // Title
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
               child: Row(
                 children: [
-                  Text(
-                    'Comments',
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
+                  Text('Comments',
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700)),
                   const Spacer(),
-                  Text(
-                    '${widget.post.commentCount}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant),
-                  ),
+                  Text('${widget.post.commentCount}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant)),
                 ],
               ),
             ),
-
             const Divider(height: 1),
-
-            // Comments list
             Expanded(
               child: commentsAsync.when(
                 data: (comments) => comments.isEmpty
@@ -703,11 +619,11 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                         child: Text('Be the first to comment 🙏',
                             style: theme.textTheme.bodyMedium?.copyWith(
                                 color:
-                                    theme.colorScheme.onSurfaceVariant)),
-                      )
+                                    theme.colorScheme.onSurfaceVariant)))
                     : ListView.separated(
                         controller: scrollCtrl,
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                        padding:
+                            const EdgeInsets.fromLTRB(16, 12, 16, 12),
                         itemCount: comments.length,
                         separatorBuilder: (_, __) =>
                             const SizedBox(height: 12),
@@ -716,28 +632,23 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                       ),
                 loading: () => const Center(
                     child: CircularProgressIndicator()),
-                error: (_, __) => const Center(
-                    child: Text('Failed to load comments')),
+                error: (_, __) =>
+                    const Center(child: Text('Failed to load comments')),
               ),
             ),
-
-            // Input bar
             SafeArea(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
-                    16,
-                    8,
-                    16,
+                    16, 8, 16,
                     MediaQuery.of(context).viewInsets.bottom + 8),
                 child: Row(
                   children: [
                     CircleAvatar(
                       radius: 18,
                       backgroundColor: AppColors.saffron,
-                      backgroundImage:
-                          widget.currentUser?.photoUrl != null
-                              ? NetworkImage(widget.currentUser!.photoUrl!)
-                              : null,
+                      backgroundImage: widget.currentUser?.photoUrl != null
+                          ? NetworkImage(widget.currentUser!.photoUrl!)
+                          : null,
                       child: widget.currentUser?.photoUrl == null
                           ? Text(
                               (widget.currentUser?.displayName
@@ -749,16 +660,14 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                               style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w700),
-                            )
+                                  fontWeight: FontWeight.w700))
                           : null,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: TextField(
                         controller: _ctrl,
-                        textCapitalization:
-                            TextCapitalization.sentences,
+                        textCapitalization: TextCapitalization.sentences,
                         decoration: InputDecoration(
                           hintText: 'Add a comment…',
                           border: OutlineInputBorder(
@@ -780,8 +689,8 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                         ? const SizedBox(
                             width: 24,
                             height: 24,
-                            child:
-                                CircularProgressIndicator(strokeWidth: 2))
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2))
                         : IconButton(
                             icon: const Icon(Icons.send_rounded,
                                 color: AppColors.saffron),
@@ -810,7 +719,6 @@ class _CommentTile extends StatelessWidget {
     final initial = comment.displayName.isNotEmpty
         ? comment.displayName[0].toUpperCase()
         : 'D';
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -840,7 +748,7 @@ class _CommentTile extends StatelessWidget {
                           ?.copyWith(fontWeight: FontWeight.w700)),
                   const Spacer(),
                   Text(
-                    _formatRelative(comment.createdAt),
+                    _fmt(comment.createdAt),
                     style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant),
                   ),
@@ -857,7 +765,7 @@ class _CommentTile extends StatelessWidget {
     );
   }
 
-  String _formatRelative(DateTime dt) {
+  String _fmt(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 60) return '${diff.inMinutes}m';
     if (diff.inHours < 24) return '${diff.inHours}h';
@@ -865,155 +773,64 @@ class _CommentTile extends StatelessWidget {
   }
 }
 
-// ── Temple Browse widgets ─────────────────────────────────────────────────────
-
-class _SearchBar extends ConsumerStatefulWidget {
-  @override
-  ConsumerState<_SearchBar> createState() => _SearchBarState();
-}
-
-class _SearchBarState extends ConsumerState<_SearchBar> {
-  final _ctrl = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl.text = ref.read(searchQueryProvider);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final query = ref.watch(searchQueryProvider);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: TextField(
-        controller: _ctrl,
-        onChanged: (v) => updateSearchQuery(ref, v),
-        decoration: InputDecoration(
-          hintText: 'Search temples, cities…',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: query.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    _ctrl.clear();
-                    updateSearchQuery(ref, '');
-                  },
-                )
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: theme.colorScheme.surfaceContainerHighest,
-          contentPadding: const EdgeInsets.symmetric(vertical: 0),
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryFilter extends ConsumerWidget {
-  final TempleCategory selected;
-  const _CategoryFilter({required this.selected});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    return SizedBox(
-      height: 48,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: TempleCategory.values.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (_, i) {
-          final cat = TempleCategory.values[i];
-          final isSelected = cat == selected;
-          return FilterChip(
-            label: Text(cat.displayName),
-            selected: isSelected,
-            onSelected: (_) =>
-                ref.read(selectedCategoryProvider.notifier).state = cat,
-            backgroundColor: theme.colorScheme.surfaceContainerHighest,
-            selectedColor: AppColors.saffron.withValues(alpha: 0.15),
-            checkmarkColor: AppColors.saffron,
-            side: BorderSide(
-              color: isSelected
-                  ? AppColors.saffron
-                  : theme.colorScheme.outlineVariant,
-            ),
-            labelStyle: theme.textTheme.bodySmall?.copyWith(
-              color: isSelected
-                  ? AppColors.saffron
-                  : theme.colorScheme.onSurface,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-// ── Empty states ──────────────────────────────────────────────────────────────
-
-class _TempleEmptyState extends StatelessWidget {
-  const _TempleEmptyState();
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-      child: Column(children: [
-        Icon(Icons.temple_hindu,
-            size: 56, color: theme.colorScheme.outlineVariant),
-        const SizedBox(height: 12),
-        Text('No temples found', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 4),
-        Text('Try a different search or category',
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-      ]),
-    );
-  }
-}
+// ── Empty state ───────────────────────────────────────────────────────────────
 
 class _FeedEmptyState extends StatelessWidget {
   final bool hasFavourites;
   const _FeedEmptyState({required this.hasFavourites});
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-      child: Column(children: [
-        Text(
-          hasFavourites
-              ? 'No posts from your favourites yet 📭'
-              : 'No events posted yet 📭',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-        ),
-        if (!hasFavourites) ...[
-          const SizedBox(height: 6),
+      padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
+      child: Column(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.saffron.withValues(alpha: 0.08),
+            ),
+            child: const Icon(Icons.newspaper_outlined,
+                size: 40, color: AppColors.saffron),
+          ),
+          const SizedBox(height: 16),
           Text(
-            'Save temples as favourites to see their events here.',
+            hasFavourites
+                ? 'No posts from your favourites yet'
+                : 'No events posted yet',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            hasFavourites
+                ? 'Your favourite temples haven\'t posted anything yet.\nCheck back soon!'
+                : 'Save temples as favourites to see\ntheir events and updates here.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant, height: 1.5),
+                color: theme.colorScheme.onSurfaceVariant, height: 1.6),
           ),
+          if (!hasFavourites) ...[
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.saffron,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => context.push('/browse'),
+              icon: const Icon(Icons.search_rounded, size: 18),
+              label: const Text('Browse Temples',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ],
         ],
-      ]),
+      ),
     );
   }
 }
