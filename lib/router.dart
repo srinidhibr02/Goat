@@ -20,6 +20,7 @@ import 'features/profile/presentation/pages/notifications_page.dart';
 import 'features/profile/presentation/pages/privacy_policy_page.dart';
 import 'features/profile/presentation/pages/help_support_page.dart';
 import 'features/temples/domain/entities/temple.dart';
+import 'features/temples/presentation/pages/browse_temples_page.dart';
 import 'features/temples/presentation/pages/explore_page.dart';
 import 'features/temples/presentation/pages/home_page.dart';
 import 'features/temples/presentation/pages/temple_detail_page.dart';
@@ -156,6 +157,26 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => const HelpSupportPage(),
           ),
         ],
+      ),
+
+      // ── Browse temples (push, no bottom nav) ─────────────────────────
+      GoRoute(
+        path: '/browse',
+        name: 'browse',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const BrowseTemplesPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.0, 1.0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                  parent: animation, curve: Curves.easeOutCubic)),
+              child: child,
+            );
+          },
+        ),
       ),
 
       // ── Temple detail (push, no bottom nav) ───────────────────────────

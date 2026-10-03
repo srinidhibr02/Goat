@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/temple.dart';
@@ -7,7 +8,7 @@ import '../providers/favorites_provider.dart';
 import '../providers/temples_providers.dart';
 import '../widgets/temple_card.dart';
 
-// ── Derived provider: list of full Temple objects for favorited IDs ────────────
+// ── Derived provider ──────────────────────────────────────────────────────────
 
 /// Resolves favorited temple IDs → full [Temple] objects by cross-referencing
 /// the full temple list. Falls back gracefully if a temple can't be found.
@@ -19,18 +20,20 @@ final favoriteTemplesProvider = FutureProvider<List<Temple>>((ref) async {
   final allAsync = ref.watch(templesProvider);
   final all = allAsync.valueOrNull ?? [];
 
-  // Maintain insertion order of favorites.
   final byId = {for (final t in all) t.id: t};
   return favIds.map((id) => byId[id]).whereType<Temple>().toList();
 });
 
-/// The Favorites tab — grid of temples the user has hearted.
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+/// The Favourites tab — grid of temples the user has hearted.
 class FavoritesPage extends ConsumerWidget {
   const FavoritesPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final favsAsync = ref.watch(favoriteTemplesProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -44,29 +47,49 @@ class FavoritesPage extends ConsumerWidget {
                       // ── Header ─────────────────────────────────────────
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          padding: const EdgeInsets.fromLTRB(20, 20, 16, 16),
+                          child: Row(
                             children: [
-                              Text(
-                                'Favourites',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.w700),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${temples.length} saved ${temples.length == 1 ? 'temple' : 'temples'}',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Favourites',
+                                      style: theme.textTheme.headlineSmall
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w700),
                                     ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${temples.length} saved '
+                                      '${temples.length == 1 ? 'temple' : 'temples'}',
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                        color: theme
+                                            .colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
+                              // Quick-access search / browse icon
+                              Tooltip(
+                                message: 'Browse Temples',
+                                child: IconButton(
+                                  onPressed: () => context.push('/browse'),
+                                  icon: const Icon(Icons.search_rounded),
+                                  iconSize: 24,
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: theme
+                                        .colorScheme.surfaceContainerHighest,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
                             ],
                           ),
                         ),
@@ -74,7 +97,7 @@ class FavoritesPage extends ConsumerWidget {
 
                       // ── Grid ───────────────────────────────────────────
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
                         sliver: SliverGrid.builder(
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
@@ -98,7 +121,7 @@ class FavoritesPage extends ConsumerWidget {
                 const Icon(Icons.error_outline, size: 48),
                 const SizedBox(height: 12),
                 Text('Failed to load favourites',
-                    style: Theme.of(context).textTheme.titleMedium),
+                    style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () => ref.refresh(favoriteTemplesProvider.future),
@@ -163,6 +186,21 @@ class _EmptyFavorites extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
                 height: 1.6,
               ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.saffron,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 12),
+              ),
+              onPressed: () => context.push('/browse'),
+              icon: const Icon(Icons.search_rounded, size: 18),
+              label: const Text('Browse Temples',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
