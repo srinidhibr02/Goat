@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:377087662789:android:66879ee613d74056a7aeac",
         "android_client_info": {
-          "package_name": "com.example.goat"
+          "package_name": "app.zerolpa.goat"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "377087662789-66dbh53hvkga85d3pmrv09j6v4ke4rob.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.goat",
+            "package_name": "app.zerolpa.goat",
             "certificate_hash": "fc2de15ac032ac93bf1d8f75dbef5973c671b021"
           }
         },
@@ -42,7 +42,7 @@
               "client_id": "377087662789-jln2g4ptbr0ik2mrgbtiebf71an09e3p.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.goat"
+                "bundle_id": "app.zerolpa.goat"
               }
             }
           ]

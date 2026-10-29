@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -9,10 +11,16 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Load signing credentials from key.properties (not committed to git)
+val keyPropertiesFile = rootProject.file("key.properties")
+val keyProperties = Properties().apply {
+    if (keyPropertiesFile.exists()) {
+        load(keyPropertiesFile.inputStream())
+    }
+}
+
 android {
-    // ── IMPORTANT: Replace with your own reverse-domain application ID before
-    // publishing to the Play Store. e.g. "com.yourcompany.goat"
-    namespace = "com.example.goat"
+    namespace = "app.zerolpa.goat"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -26,16 +34,21 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keyProperties["keyAlias"] as String? ?: ""
+            keyPassword = keyProperties["keyPassword"] as String? ?: ""
+            storeFile = keyProperties["storeFile"]?.let { file(it as String) }
+            storePassword = keyProperties["storePassword"] as String? ?: ""
+        }
+    }
+
     defaultConfig {
-        // ── IMPORTANT: Replace with your own unique Application ID before
-        // publishing. Must match your google-services.json package_name.
-        applicationId = "com.example.goat"
+        applicationId = "app.zerolpa.goat"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-
-        // Enables multidex support for apps with >64k methods
         multiDexEnabled = true
     }
 
@@ -45,11 +58,12 @@ android {
             isShrinkResources = false
         }
         release {
-            // ── IMPORTANT: Replace with your own keystore signing config
-            // before publishing. Currently uses debug keys (OK for internal testing).
-            signingConfig = signingConfigs.getByName("debug")
-
-            // Enable R8 full mode shrinking + obfuscation for release builds
+            // Use release keystore if key.properties exists, otherwise fall back to debug
+            signingConfig = if (keyPropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

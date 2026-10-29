@@ -67,8 +67,9 @@ class HomePage extends ConsumerWidget {
                     child: Center(child: CircularProgressIndicator()),
                   ),
                 ),
-                error: (_, __) =>
-                    const SliverToBoxAdapter(child: SizedBox.shrink()),
+                error: (error, __) => SliverToBoxAdapter(
+                  child: _FeedErrorState(error: error),
+                ),
               ),
             ],
           ),
@@ -774,6 +775,57 @@ class _CommentTile extends StatelessWidget {
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────
+
+// ── Feed Error State ──────────────────────────────────────────────────────────
+
+class _FeedErrorState extends ConsumerWidget {
+  final Object error;
+  const _FeedErrorState({required this.error});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 40, 24, 40),
+      child: Column(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.colorScheme.errorContainer.withValues(alpha: 0.5),
+            ),
+            child: Icon(Icons.wifi_off_rounded,
+                size: 40, color: theme.colorScheme.error),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Could not load updates',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Check your connection and try again.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant, height: 1.6),
+          ),
+          const SizedBox(height: 20),
+          OutlinedButton.icon(
+            onPressed: () => ref.invalidate(feedPostsProvider),
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Feed Empty State ──────────────────────────────────────────────────────────
 
 class _FeedEmptyState extends StatelessWidget {
   final bool hasFavourites;

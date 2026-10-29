@@ -1,4 +1,4 @@
-package com.example.goat
+package app.zerolpa.goat
 
 import io.flutter.embedding.android.FlutterActivity
 
